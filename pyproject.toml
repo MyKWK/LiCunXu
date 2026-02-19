@@ -1,0 +1,35 @@
+[project]
+name = "five-dynasties-kg"
+version = "0.1.0"
+description = "五代历史知识图谱与智能问答系统 (Five Dynasties KG-RAG System)"
+requires-python = ">=3.11"
+dependencies = [
+    "neo4j>=5.26.0",
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.7.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.34.0",
+    "python-dotenv>=1.0.0",
+    "loguru>=0.7.0",
+    "requests>=2.32.0",
+    "jieba>=0.42.1",
+    "jinja2>=3.1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "ruff>=0.8.0",
+    "ipython>=8.0.0",
+]
+
+[build-system]
+requires = ["setuptools>=70.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["config*", "models*", "graph*", "ingestion*", "rag*", "api*", "data*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

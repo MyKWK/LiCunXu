@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>五代历史知识图谱</title>
+<style>
+  :root { --bg: #0f172a; --card: #1e293b; --border: #334155; --blue: #3b82f6; --amber: #f59e0b; --red: #ef4444; --green: #22c55e; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: #e2e8f0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+  .header { background: var(--card); padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .header h1 { font-size: 17px; color: #f8fafc; }
+  .header .sub { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+  .stats-bar { display: flex; gap: 8px; flex-wrap: wrap; }
+  .stat-item { background: rgba(255,255,255,0.08); padding: 3px 10px; border-radius: 12px; font-size: 11px; color: #cbd5e1; }
+  .stat-item span { font-weight: 700; color: var(--amber); }
+
+  .main { flex: 1; display: flex; overflow: hidden; }
+
+  .graph-panel { flex: 1; position: relative; display: flex; flex-direction: column; min-width: 0; }
+  .toolbar { padding: 8px 12px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; border-bottom: 1px solid var(--border); flex-shrink: 0; background: var(--card); }
+  .btn { padding: 5px 12px; border: none; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 500; transition: all 0.15s; white-space: nowrap; }
+  .btn-blue { background: var(--blue); color: white; }
+  .btn-blue:hover { background: #2563eb; }
+  .btn-ghost { background: rgba(255,255,255,0.08); color: #cbd5e1; border: 1px solid rgba(255,255,255,0.15); }
+  .btn-ghost:hover { background: rgba(255,255,255,0.15); }
+  .btn-amber { background: var(--amber); color: #0f172a; }
+  .btn-amber:hover { background: #d97706; }
+  .search-group { margin-left: auto; display: flex; gap: 5px; }
+  .search-group input { padding: 5px 10px; border: 1px solid #475569; border-radius: 5px; background: var(--bg); color: #e2e8f0; font-size: 12px; width: 160px; outline: none; }
+  .search-group input:focus { border-color: var(--blue); }
+  .search-group input::placeholder { color: #64748b; }
+  .graph-area { flex: 1; position: relative; }
+  #graph-container { position: absolute; inset: 0; }
+  .overlay-msg { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; z-index: 5; }
+  .overlay-msg.hidden { display: none; }
+  .overlay-msg .icon { font-size: 48px; margin-bottom: 10px; }
+  .overlay-msg .text { font-size: 15px; color: #64748b; }
+  .overlay-msg .hint { font-size: 12px; color: #475569; margin-top: 4px; }
+  .spinner-wrap { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 20; text-align: center; display: none; }
+  .spinner { width: 30px; height: 30px; border: 3px solid #334155; border-top-color: var(--blue); border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto 6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .err-toast { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); background: #7f1d1d; color: #fca5a5; padding: 8px 16px; border-radius: 6px; font-size: 12px; z-index: 100; display: none; max-width: 80%; text-align: center; }
+
+  /* Right Panel */
+  .right-panel { width: 400px; flex-shrink: 0; display: flex; flex-direction: column; background: var(--card); border-left: 1px solid var(--border); }
+  .panel-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .panel-tab { flex: 1; padding: 9px; text-align: center; font-size: 13px; cursor: pointer; color: #94a3b8; border-bottom: 2px solid transparent; transition: all 0.15s; }
+  .panel-tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+  .panel-tab:hover { color: #e2e8f0; }
+  .tab-body { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .tab-pane { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+  .tab-pane.active { display: flex; }
+
+  /* QA pane */
+  .qa-msgs { flex: 1; overflow-y: auto; padding: 10px; }
+  .msg { margin-bottom: 10px; }
+  .msg-q { background: #334155; padding: 8px 10px; border-radius: 8px 8px 2px 8px; font-size: 13px; }
+  .msg-a { background: #0f172a; padding: 8px 10px; border-radius: 8px 8px 8px 2px; font-size: 13px; line-height: 1.7; border-left: 3px solid var(--blue); margin-top: 5px; }
+  .msg-cypher { font-family: monospace; font-size: 11px; background: #0f172a; color: #22c55e; padding: 5px; border-radius: 4px; margin-top: 3px; white-space: pre-wrap; word-break: break-all; }
+  .msg-meta { font-size: 11px; color: #475569; margin-top: 2px; }
+  .presets { padding: 6px 10px; border-top: 1px solid var(--border); flex-shrink: 0; }
+  .presets h4 { font-size: 11px; color: #64748b; margin-bottom: 4px; }
+  .preset-btn { display: block; width: 100%; text-align: left; padding: 4px 8px; margin-bottom: 2px; font-size: 12px; background: #0f172a; border: 1px solid var(--border); border-radius: 4px; cursor: pointer; color: #94a3b8; transition: all 0.15s; }
+  .preset-btn:hover { border-color: var(--blue); color: #e2e8f0; }
+  .qa-input { padding: 10px; border-top: 1px solid var(--border); display: flex; gap: 6px; flex-shrink: 0; }
+  .qa-input input { flex: 1; padding: 8px 10px; border: 1px solid #475569; border-radius: 5px; background: #0f172a; color: #e2e8f0; font-size: 13px; outline: none; }
+  .qa-input input:focus { border-color: var(--blue); }
+  .qa-input input::placeholder { color: #475569; }
+
+  /* Detail pane */
+  .detail-content { flex: 1; overflow-y: auto; padding: 12px; }
+  .detail-header { margin-bottom: 12px; }
+  .detail-header h3 { color: var(--amber); font-size: 16px; margin-bottom: 4px; }
+  .detail-header .badge { display: inline-block; background: rgba(59,130,246,0.2); color: var(--blue); padding: 2px 8px; border-radius: 10px; font-size: 11px; margin-right: 4px; }
+  .detail-row { font-size: 12px; margin: 4px 0; line-height: 1.6; color: #cbd5e1; }
+  .detail-row .lbl { color: #64748b; font-weight: 500; }
+  .detail-section { margin-top: 14px; }
+  .detail-section h4 { font-size: 13px; color: #94a3b8; margin-bottom: 6px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+  .ev-card { background: #0f172a; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; margin-bottom: 6px; cursor: pointer; transition: border-color 0.15s; }
+  .ev-card:hover { border-color: var(--blue); }
+  .ev-card h4 { font-size: 13px; color: var(--blue); margin-bottom: 2px; }
+  .ev-card .meta { font-size: 11px; color: #64748b; }
+  .ev-card .desc { font-size: 12px; color: #94a3b8; margin-top: 3px; line-height: 1.5; }
+  .snippet-card { background: #0f172a; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; margin-bottom: 6px; }
+  .snippet-card .book { font-size: 11px; color: var(--amber); margin-bottom: 3px; }
+  .snippet-card .text { font-size: 12px; color: #94a3b8; line-height: 1.6; }
+  .snippet-card .text mark { background: rgba(251,191,36,0.3); color: var(--amber); padding: 0 2px; border-radius: 2px; }
+  .rel-tag { display: inline-block; background: rgba(255,255,255,0.08); border: 1px solid var(--border); border-radius: 4px; padding: 2px 8px; margin: 2px 4px 2px 0; font-size: 11px; color: #cbd5e1; cursor: pointer; transition: all 0.15s; }
+  .rel-tag:hover { background: rgba(59,130,246,0.2); border-color: var(--blue); }
+  .rel-tag .rtype { color: #64748b; font-size: 10px; }
+  .participant-tag { display: inline-block; background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); border-radius: 4px; padding: 2px 8px; margin: 2px 4px 2px 0; font-size: 11px; color: #fca5a5; cursor: pointer; }
+  .participant-tag:hover { background: rgba(239,68,68,0.3); }
+  .empty { padding: 30px; text-align: center; color: #475569; font-size: 13px; }
+  .ispin { display: inline-block; width: 14px; height: 14px; border: 2px solid #475569; border-top-color: var(--blue); border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; }
+
+  /* Summary markdown styles */
+  .summary-box { background: #0f172a; border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; margin: 10px 0; line-height: 1.8; font-size: 13px; color: #cbd5e1; }
+  .summary-box h1, .summary-box h2, .summary-box h3, .summary-box h4 { color: var(--amber); margin: 8px 0 4px; }
+  .summary-box h1 { font-size: 16px; } .summary-box h2 { font-size: 15px; } .summary-box h3 { font-size: 14px; } .summary-box h4 { font-size: 13px; }
+  .summary-box strong { color: #f8fafc; font-weight: 700; }
+  .summary-box em { color: #94a3b8; }
+  .summary-box ul, .summary-box ol { padding-left: 20px; margin: 4px 0; }
+  .summary-box li { margin: 2px 0; }
+  .summary-box p { margin: 4px 0; }
+  .summary-box blockquote { border-left: 3px solid var(--blue); padding-left: 10px; color: #94a3b8; margin: 6px 0; }
+  .summary-loading { text-align: center; padding: 16px; color: #64748b; font-size: 12px; }
+  .summary-label { font-size: 13px; color: var(--blue); font-weight: 600; margin-top: 12px; margin-bottom: 4px; }
+
+  /* Events pane */
+  .events-list { flex: 1; overflow-y: auto; padding: 10px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>五代历史知识图谱与智能问答系统</h1>
+    <div class="sub">907-960 | 后梁 · 后唐 · 后晋 · 后汉 · 后周</div>
+  </div>
+  <div class="stats-bar" id="stats-bar"></div>
+</div>
+
+<div class="main">
+  <div class="graph-panel">
+    <div class="toolbar">
+      <button class="btn btn-blue" onclick="loadFull()">加载全图</button>
+      <button class="btn btn-ghost" onclick="showSuccession()">皇位更替</button>
+      <button class="btn btn-ghost" onclick="searchAndShow('李克用')">李克用</button>
+      <button class="btn btn-ghost" onclick="searchAndShow('李存勖')">李存勖</button>
+      <button class="btn btn-ghost" onclick="searchAndShow('朱温')">朱温</button>
+      <button class="btn btn-ghost" onclick="searchAndShow('石敬瑭')">石敬瑭</button>
+      <button class="btn btn-ghost" onclick="searchAndShow('郭威')">郭威</button>
+      <button class="btn btn-ghost" onclick="searchAndShow('赵匡胤')">赵匡胤</button>
+      <div class="search-group">
+        <input id="search-input" placeholder="搜索人物..." onkeydown="if(event.key==='Enter')doSearch()">
+        <button class="btn btn-blue" onclick="doSearch()">搜索</button>
+      </div>
+    </div>
+    <div class="graph-area">
+      <div class="overlay-msg" id="overlay">
+        <div class="icon">🏛️</div>
+        <div class="text">五代十国知识图谱</div>
+        <div class="hint">点击左侧按钮或搜索人物开始探索</div>
+      </div>
+      <div class="spinner-wrap" id="spinner"><div class="spinner"></div><div style="color:#94a3b8;font-size:12px;">加载中...</div></div>
+      <div class="err-toast" id="err-toast"></div>
+      <div id="graph-container"></div>
+    </div>
+  </div>
+
+  <div class="right-panel">
+    <div class="panel-tabs">
+      <div class="panel-tab active" data-tab="qa" onclick="switchTab('qa')">智能问答</div>
+      <div class="panel-tab" data-tab="detail" onclick="switchTab('detail')">节点详情</div>
+      <div class="panel-tab" data-tab="events" onclick="switchTab('events')">相关事件</div>
+    </div>
+    <div class="tab-body">
+      <div class="tab-pane active" id="pane-qa">
+        <div class="qa-msgs" id="qa-msgs">
+          <div class="empty">在下方输入问题，或点击推荐问题</div>
+        </div>
+        <div class="presets">
+          <h4>推荐问题</h4>
+          <button class="preset-btn" onclick="askQ(this.textContent)">李克用有哪些义子？</button>
+          <button class="preset-btn" onclick="askQ(this.textContent)">朱温是怎么死的？</button>
+          <button class="preset-btn" onclick="askQ(this.textContent)">五代皇位更替的顺序是什么？</button>
+          <button class="preset-btn" onclick="askQ(this.textContent)">李存勖和朱温是什么关系？</button>
+          <button class="preset-btn" onclick="askQ(this.textContent)">赵匡胤是如何夺取后周政权的？</button>
+        </div>
+        <div class="qa-input">
+          <input id="q-input" placeholder="输入历史问题..." onkeydown="if(event.key==='Enter')askFromInput()">
+          <button class="btn btn-blue" onclick="askFromInput()">提问</button>
+        </div>
+      </div>
+      <div class="tab-pane" id="pane-detail">
+        <div class="detail-content" id="detail-content">
+          <div class="empty">点击图谱中的节点查看详情</div>
+        </div>
+      </div>
+      <div class="tab-pane" id="pane-events">
+        <div class="events-list" id="events-list">
+          <div class="empty">搜索或点击人物后，这里显示相关事件</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var _visLoaded = false;
+var _visScript = document.createElement('script');
+_visScript.src = '/static/vis-network.min.js';
+_visScript.onload = function() { _visLoaded = true; };
+_visScript.onerror = function() { showErr('vis-network.min.js 加载失败'); };
+document.head.appendChild(_visScript);
+</script>
+
+<script>
+var net = null;
+var _allNodes = [];
+var _currentPersonUid = null;
+var NC = { Person:'#ef4444', Dynasty:'#f59e0b', Event:'#3b82f6', Place:'#22c55e' };
+var EC = { FATHER_OF:'#3b82f6', ADOPTED_SON:'#ef4444', KILLED:'#dc2626', BETRAYED:'#a855f7', REPLACED:'#f59e0b', SERVED:'#6b7280', FOUNDED:'#22c55e', SUCCEEDED:'#f97316', SPOUSE:'#ec4899', SIBLING:'#06b6d4', COMMANDED:'#fb923c', SUBORDINATE:'#6b7280', ALLIED_WITH:'#22c55e', RIVAL:'#ef4444', SURRENDERED_TO:'#92400e', PARTICIPATED_IN:'#14b8a6' };
+
+/* ──── 关系类型中文映射 ──── */
+var REL_CN = {};
+var REL_CN_LOADED = false;
+
+function loadRelCN() {
+  apiFetch('/api/relation_types_cn').then(function(d) {
+    REL_CN = d;
+    REL_CN_LOADED = true;
+  }).catch(function() {});
+}
+
+function relCN(engType) {
+  return REL_CN[engType] || engType;
+}
+
+/* ──── 简易 Markdown → HTML 渲染器 ──── */
+function mdToHtml(md) {
+  if (!md) return '';
+  var html = md;
+  // code blocks (```...```)
+  html = html.replace(/```[\s\S]*?```/g, function(m) {
+    var code = m.replace(/^```\w*\n?/, '').replace(/\n?```$/, '');
+    return '<pre style="background:#1e293b;padding:8px;border-radius:4px;overflow-x:auto;font-size:12px;"><code>' + esc(code) + '</code></pre>';
+  });
+  // headers
+  html = html.replace(/^#### (.+)$/gm, '<h4>$1</h4>');
+  html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+  html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+  html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+  // bold
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  // italic
+  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  // blockquote
+  html = html.replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>');
+  // unordered list
+  html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
+  html = html.replace(/(<li>.*<\/li>\n?)+/g, function(m) { return '<ul>' + m + '</ul>'; });
+  // ordered list
+  html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+  // paragraphs
+  html = html.replace(/\n{2,}/g, '</p><p>');
+  html = html.replace(/\n/g, '<br>');
+  if (!html.startsWith('<')) html = '<p>' + html + '</p>';
+  return html;
+}
+
+function $(id) { return document.getElementById(id); }
+function showSpin(v) { $('spinner').style.display = v ? 'block' : 'none'; }
+function hideOverlay() { $('overlay').classList.add('hidden'); }
+function esc(t) { if (!t) return ''; var d = document.createElement('div'); d.textContent = String(t); return d.innerHTML; }
+
+var _errTimer;
+function showErr(msg) {
+  var el = $('err-toast');
+  el.textContent = msg;
+  el.style.display = 'block';
+  clearTimeout(_errTimer);
+  _errTimer = setTimeout(function() { el.style.display = 'none'; }, 6000);
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.panel-tab').forEach(function(t) { t.classList.toggle('active', t.dataset.tab === name); });
+  document.querySelectorAll('.tab-pane').forEach(function(p) { p.classList.toggle('active', p.id === 'pane-' + name); });
+}
+
+function render(data, opts) {
+  hideOverlay();
+  showSpin(false);
+  opts = opts || {};
+
+  if (!data || !data.nodes || !data.nodes.length) { showErr('没有找到数据'); return; }
+  if (typeof vis === 'undefined' || !vis.Network) { showErr('vis-network 库尚未加载完成'); return; }
+
+  try {
+    var nodeCount = data.nodes.length;
+    var edgeCount = data.edges.length;
+
+    // Limit events displayed in graph for person view (keep only top 30 events by year closeness)
+    var maxEvents = opts.maxEvents || 30;
+    var personNodes = [], eventNodes = [], otherNodes = [];
+    data.nodes.forEach(function(n) {
+      var lb = (n.labels && n.labels[0]) || 'Person';
+      if (lb === 'Event') eventNodes.push(n);
+      else if (lb === 'Person') personNodes.push(n);
+      else otherNodes.push(n);
+    });
+
+    // If too many events, keep only maxEvents
+    if (eventNodes.length > maxEvents) {
+      eventNodes.sort(function(a, b) { return ((a.props||{}).year||0) - ((b.props||{}).year||0); });
+      eventNodes = eventNodes.slice(0, maxEvents);
+    }
+
+    var filteredNodes = personNodes.concat(otherNodes).concat(eventNodes);
+    var nodeIds = {};
+    filteredNodes.forEach(function(n) { nodeIds[n.uid] = true; });
+
+    var filteredEdges = data.edges.filter(function(e) {
+      return nodeIds[e.source] && nodeIds[e.target];
+    });
+
+    _allNodes = filteredNodes;
+
+    var nodes = filteredNodes.map(function(n) {
+      var lb = (n.labels && n.labels[0]) || 'Person';
+      var isCenter = opts.centerUid && n.uid === opts.centerUid;
+      return {
+        id: n.uid, label: n.name || n.uid,
+        color: { background: NC[lb] || '#ef4444', border: isCenter ? '#fff' : (NC[lb] || '#ef4444') },
+        font: { color: '#fff', size: lb === 'Event' ? 9 : 12 },
+        shape: lb === 'Person' ? 'dot' : lb === 'Dynasty' ? 'diamond' : lb === 'Event' ? 'square' : 'triangle',
+        size: isCenter ? 24 : (lb === 'Dynasty' ? 20 : lb === 'Person' ? 14 : 8),
+        borderWidth: isCenter ? 3 : 1,
+        _raw: n
+      };
+    });
+
+    var edges = filteredEdges.map(function(e, i) {
+      var isEvent = e.rel_type === 'PARTICIPATED_IN';
+      return {
+        id: 'e' + i, from: e.source, to: e.target,
+        label: isEvent ? '' : relCN(e.rel_type),
+        color: { color: EC[e.rel_type] || '#4b5563', opacity: isEvent ? 0.3 : 0.7 },
+        font: { size: 9, color: '#6b7280', strokeWidth: 0 },
+        arrows: { to: { scaleFactor: isEvent ? 0.3 : 0.6 } },
+        smooth: { type: 'curvedCW', roundness: 0.12 },
+        width: isEvent ? 0.5 : 1,
+        _raw: e
+      };
+    });
+
+    var container = $('graph-container');
+    if (net) { net.destroy(); net = null; }
+
+    // Sparser physics: higher repulsion, longer springs
+    var totalN = nodes.length;
+    var gravConst = totalN > 100 ? -120 : totalN > 50 ? -100 : -80;
+    var springLen = totalN > 100 ? 250 : totalN > 50 ? 200 : 160;
+
+    net = new vis.Network(container,
+      { nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) },
+      {
+        physics: {
+          solver: 'forceAtlas2Based',
+          forceAtlas2Based: {
+            gravitationalConstant: gravConst,
+            centralGravity: 0.005,
+            springLength: springLen,
+            springConstant: 0.02,
+            damping: 0.85,
+            avoidOverlap: 0.8
+          },
+          stabilization: { iterations: 200 },
+          maxVelocity: 30
+        },
+        interaction: { hover: true, tooltipDelay: 200, zoomView: true, dragView: true },
+        layout: { improvedLayout: totalN < 60 }
+      }
+    );
+
+    net.on('click', function(p) {
+      if (p.nodes.length) {
+        var nodeId = p.nodes[0];
+        var nd = nodes.find(function(x) { return x.id === nodeId; });
+        if (nd && nd._raw) {
+          onNodeClick(nd._raw);
+        }
+      }
+    });
+
+    net.on('doubleClick', function(p) {
+      if (p.nodes.length) {
+        var nodeId = p.nodes[0];
+        var nd = nodes.find(function(x) { return x.id === nodeId; });
+        if (nd && nd._raw) {
+          var lb = (nd._raw.labels && nd._raw.labels[0]) || 'Person';
+          if (lb === 'Person') {
+            searchAndShow(nd._raw.name || nd._raw.uid);
+          }
+        }
+      }
+    });
+
+    net.once('stabilizationIterationsDone', function() {
+      net.setOptions({ physics: { enabled: false } });
+    });
+
+  } catch (e) {
+    showErr('渲染图谱失败: ' + e.message);
+  }
+}
+
+/* ──── Node Click → Right Panel Detail ──── */
+
+function onNodeClick(raw) {
+  var lb = (raw.labels && raw.labels[0]) || 'Person';
+  if (lb === 'Person') {
+    showPersonDetail(raw.uid || raw.props && raw.props.uid);
+  } else if (lb === 'Event') {
+    showEventDetail(raw.uid || raw.props && raw.props.uid);
+  } else {
+    // Dynasty/Place: show basic info
+    showBasicDetail(raw);
+  }
+  switchTab('detail');
+}
+
+function showPersonDetail(uid) {
+  if (!uid) return;
+  var el = $('detail-content');
+  el.innerHTML = '<div style="text-align:center;padding:30px;"><span class="ispin"></span> 加载中...</div>';
+
+  apiFetch('/api/graph/person/' + uid + '/detail')
+    .then(function(d) {
+      var p = d.person;
+      var h = '<div class="detail-header">';
+      h += '<h3>' + esc(p.name) + '</h3>';
+      if (p.role) h += '<span class="badge">' + esc(p.role) + '</span>';
+      h += '</div>';
+
+      if (p.aliases && p.aliases.length) h += '<div class="detail-row"><span class="lbl">别名：</span>' + esc(p.aliases.join('、')) + '</div>';
+      if (p.loyalty && p.loyalty.length) h += '<div class="detail-row"><span class="lbl">势力：</span>' + esc(p.loyalty.join(' → ')) + '</div>';
+      if (p.birth_year || p.death_year) h += '<div class="detail-row"><span class="lbl">生卒：</span>' + (p.birth_year || '?') + ' — ' + (p.death_year || '?') + '</div>';
+      if (p.death_cause) h += '<div class="detail-row"><span class="lbl">死因：</span>' + esc(p.death_cause) + '</div>';
+      if (p.description) h += '<div class="detail-row"><span class="lbl">简述：</span>' + esc(p.description) + '</div>';
+
+      // LLM 生平总结区域（占位符，异步加载）
+      h += '<div class="detail-section"><div class="summary-label">📝 生平总结</div>';
+      h += '<div id="person-summary-box" class="summary-box"><div class="summary-loading"><span class="ispin"></span> AI 生成中...</div></div>';
+      h += '</div>';
+
+      // Relations (中文化)
+      if (d.relations && d.relations.length) {
+        h += '<div class="detail-section"><h4>人物关系 (' + d.relations.length + ')</h4><div>';
+        d.relations.forEach(function(r) {
+          var arrow = r.direction === 'outgoing' ? '→' : '←';
+          var cnType = relCN(r.rel_type);
+          h += '<span class="rel-tag" onclick="searchAndShow(\'' + esc(r.other_name) + '\')">' +
+               esc(r.other_name) + ' <span class="rtype">' + arrow + ' ' + esc(cnType) + '</span></span>';
+        });
+        h += '</div></div>';
+      }
+
+      // Events
+      if (d.events && d.events.length) {
+        h += '<div class="detail-section"><h4>参与事件 (' + d.events.length + ')</h4>';
+        d.events.forEach(function(e) {
+          h += '<div class="ev-card" onclick="showEventDetail(\'' + esc(e.uid) + '\')">';
+          h += '<h4>' + esc(e.name) + '</h4>';
+          h += '<div class="meta">' + (e.year ? '📅 ' + e.year + ' ' : '') +
+               (e.event_type ? '<span style="background:#334155;padding:1px 6px;border-radius:3px;font-size:10px;">' + esc(e.event_type) + '</span>' : '') + '</div>';
+          if (e.description) h += '<div class="desc">' + esc(e.description.substring(0, 80)) + (e.description.length > 80 ? '...' : '') + '</div>';
+          h += '</div>';
+        });
+        h += '</div>';
+      }
+
+      el.innerHTML = h;
+      _currentPersonUid = uid;
+      loadPersonEvents(uid);
+
+      // 异步加载 LLM 总结
+      apiFetch('/api/graph/person/' + uid + '/summary')
+        .then(function(s) {
+          var box = document.getElementById('person-summary-box');
+          if (box) {
+            box.innerHTML = mdToHtml(s.summary);
+            if (s.from_cache) {
+              box.insertAdjacentHTML('afterend', '<div style="font-size:10px;color:#475569;margin-top:2px;">（已缓存）</div>');
+            }
+          }
+        })
+        .catch(function(err) {
+          var box = document.getElementById('person-summary-box');
+          if (box) box.innerHTML = '<div style="color:#94a3b8;font-size:12px;">总结生成失败: ' + esc(err.message) + '</div>';
+        });
+    })
+    .catch(function(e) { el.innerHTML = '<div class="empty">加载失败: ' + esc(e.message) + '</div>'; });
+}
+
+function showEventDetail(uid) {
+  if (!uid) return;
+  var el = $('detail-content');
+  el.innerHTML = '<div style="text-align:center;padding:30px;"><span class="ispin"></span> 加载事件详情...</div>';
+
+  apiFetch('/api/graph/event/' + uid)
+    .then(function(d) {
+      var e = d.event;
+      var h = '<div class="detail-header">';
+      h += '<h3>' + esc(e.name) + '</h3>';
+      if (e.event_type) h += '<span class="badge">' + esc(e.event_type) + '</span>';
+      h += '</div>';
+
+      if (e.year) h += '<div class="detail-row"><span class="lbl">年份：</span>' + e.year + '</div>';
+      if (e.location) h += '<div class="detail-row"><span class="lbl">地点：</span>' + esc(e.location) + '</div>';
+      if (e.outcome) h += '<div class="detail-row"><span class="lbl">结果：</span>' + esc(e.outcome) + '</div>';
+      if (e.description) h += '<div class="detail-row"><span class="lbl">描述：</span>' + esc(e.description) + '</div>';
+
+      // LLM 事件总结区域（占位符，异步加载）
+      h += '<div class="detail-section"><div class="summary-label">📝 事件总结</div>';
+      h += '<div id="event-summary-box" class="summary-box"><div class="summary-loading"><span class="ispin"></span> AI 生成中...</div></div>';
+      h += '</div>';
+
+      // Participants
+      if (d.participants && d.participants.length) {
+        h += '<div class="detail-section"><h4>参与人物 (' + d.participants.length + ')</h4><div>';
+        d.participants.forEach(function(p) {
+          h += '<span class="participant-tag" onclick="searchAndShow(\'' + esc(p.name) + '\')">' + esc(p.name) +
+               (p.event_role ? ' <span style="color:#64748b;font-size:10px;">(' + esc(p.event_role) + ')</span>' : '') + '</span>';
+        });
+        h += '</div></div>';
+      }
+
+      // Book snippets
+      if (d.book_snippets && d.book_snippets.length) {
+        h += '<div class="detail-section"><h4>📖 书中原文片段</h4>';
+        d.book_snippets.forEach(function(s) {
+          var txt = esc(s.text);
+          if (s.keyword) {
+            var re = new RegExp('(' + s.keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'g');
+            txt = txt.replace(re, '<mark>$1</mark>');
+          }
+          h += '<div class="snippet-card"><div class="book">📚 ' + esc(s.book) + '</div><div class="text">' + txt + '</div></div>';
+        });
+        h += '</div>';
+      }
+
+      el.innerHTML = h;
+
+      // 异步加载 LLM 事件总结
+      apiFetch('/api/graph/event/' + uid + '/summary')
+        .then(function(s) {
+          var box = document.getElementById('event-summary-box');
+          if (box) {
+            box.innerHTML = mdToHtml(s.summary);
+            if (s.from_cache) {
+              box.insertAdjacentHTML('afterend', '<div style="font-size:10px;color:#475569;margin-top:2px;">（已缓存）</div>');
+            }
+          }
+        })
+        .catch(function(err) {
+          var box = document.getElementById('event-summary-box');
+          if (box) box.innerHTML = '<div style="color:#94a3b8;font-size:12px;">总结生成失败: ' + esc(err.message) + '</div>';
+        });
+    })
+    .catch(function(e) { el.innerHTML = '<div class="empty">加载失败: ' + esc(e.message) + '</div>'; });
+}
+
+function showBasicDetail(raw) {
+  var p = raw.props || raw;
+  var el = $('detail-content');
+  var h = '<div class="detail-header"><h3>' + esc(p.name || p.original_name || raw.name) + '</h3></div>';
+  if (p.description) h += '<div class="detail-row">' + esc(p.description) + '</div>';
+  if (p.start_year || p.end_year) h += '<div class="detail-row"><span class="lbl">年份：</span>' + (p.start_year || '?') + ' — ' + (p.end_year || '?') + '</div>';
+  if (p.capital) h += '<div class="detail-row"><span class="lbl">都城：</span>' + esc(p.capital) + '</div>';
+  if (p.founder) h += '<div class="detail-row"><span class="lbl">建国者：</span>' + esc(p.founder) + '</div>';
+  el.innerHTML = h;
+}
+
+/* ──── API calls ──── */
+
+function apiFetch(url, opts) {
+  return fetch(url, opts).then(function(r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  });
+}
+
+function loadFull() {
+  showSpin(true); hideOverlay();
+  apiFetch('/api/graph/all?limit=200')
+    .then(function(d) { render(d, { maxEvents: 40 }); })
+    .catch(function(e) { showSpin(false); showErr('加载全图失败: ' + e.message); });
+}
+
+function showSuccession() {
+  showSpin(true); hideOverlay();
+  apiFetch('/api/graph/succession')
+    .then(function(d) {
+      var nodes = [], edges = [], seen = {};
+      var chain = d.chain || [];
+      chain.forEach(function(it) {
+        if (!seen[it.person_uid]) {
+          nodes.push({ uid: it.person_uid, name: it.person_name, labels: ['Person'], props: { original_name: it.person_name, role: '皇帝' } });
+          seen[it.person_uid] = 1;
+        }
+        var tu = it.target_uid || it.dynasty_uid, tn = it.target_name || it.dynasty_name;
+        if (tu && !seen[tu]) {
+          var isPerson = tu.indexOf('person_') === 0;
+          nodes.push({ uid: tu, name: tn, labels: [isPerson ? 'Person' : 'Dynasty'], props: { original_name: tn, name: tn } });
+          seen[tu] = 1;
+        }
+        if (tu) edges.push({ source: it.person_uid, target: tu, rel_type: it.rel_type || 'SUCCEEDED' });
+      });
+      render({ nodes: nodes, edges: edges }, { maxEvents: 999 });
+    })
+    .catch(function(e) { showSpin(false); showErr('皇位更替加载失败: ' + e.message); });
+}
+
+function searchAndShow(name) {
+  $('search-input').value = name;
+  doSearch();
+}
+
+function doSearch() {
+  var name = $('search-input').value.trim();
+  if (!name) return;
+  showSpin(true); hideOverlay();
+  apiFetch('/api/graph/search/person', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: name })
+  }).then(function(d) {
+    var results = d.results || [];
+    if (!results.length) { showSpin(false); showErr('未找到人物: ' + name); return; }
+    var person = results[0];
+    var uid = person.uid;
+    if (!uid) { showSpin(false); showErr('搜索结果缺少 uid'); return; }
+    loadPersonGraph(uid, person.name || name);
+    loadPersonEvents(uid);
+    showPersonDetail(uid);
+  }).catch(function(e) { showSpin(false); showErr('搜索失败: ' + e.message); });
+}
+
+function loadPersonGraph(uid, displayName) {
+  apiFetch('/api/graph/person/' + uid + '/relations')
+    .then(function(d) {
+      var nodes = [], edges = [], seen = {};
+      nodes.push({ uid: uid, name: displayName, labels: ['Person'], props: { original_name: displayName } });
+      seen[uid] = 1;
+      (d.relations || []).forEach(function(r) {
+        if (!seen[r.other_uid]) {
+          nodes.push({ uid: r.other_uid, name: r.other_name, labels: r.other_labels || ['Person'], props: { original_name: r.other_name } });
+          seen[r.other_uid] = 1;
+        }
+        var src = r.direction === 'outgoing' ? uid : r.other_uid;
+        var tgt = r.direction === 'outgoing' ? r.other_uid : uid;
+        edges.push({ source: src, target: tgt, rel_type: r.rel_type });
+      });
+      render({ nodes: nodes, edges: edges }, { centerUid: uid, maxEvents: 30 });
+    })
+    .catch(function(e) { showSpin(false); showErr('加载关系失败: ' + e.message); });
+}
+
+function loadPersonEvents(uid) {
+  apiFetch('/api/graph/person/' + uid + '/events')
+    .then(function(d) {
+      var el = $('events-list');
+      var evts = d.events || [];
+      if (!evts.length) { el.innerHTML = '<div class="empty">该人物暂无关联事件</div>'; return; }
+      el.innerHTML = evts.map(function(e) {
+        return '<div class="ev-card" onclick="showEventDetail(\'' + esc(e.uid) + '\');switchTab(\'detail\');"><h4>' + esc(e.name) + '</h4>'
+          + '<div class="meta">' + (e.year ? '📅 ' + e.year + ' ' : '') + (e.event_type ? '<span style="background:#334155;padding:1px 6px;border-radius:3px;font-size:10px;">' + esc(e.event_type) + '</span>' : '') + '</div>'
+          + (e.description ? '<div class="desc">' + esc(e.description.substring(0, 60)) + (e.description.length > 60 ? '...' : '') + '</div>' : '')
+          + '</div>';
+      }).join('');
+    })
+    .catch(function() { $('events-list').innerHTML = '<div class="empty">事件加载失败</div>'; });
+}
+
+/* ──── QA ──── */
+
+function askFromInput() {
+  var v = $('q-input').value.trim();
+  if (v) { askQ(v); $('q-input').value = ''; }
+}
+
+function askQ(q) {
+  switchTab('qa');
+  var msgs = $('qa-msgs');
+  if (msgs.querySelector('.empty')) msgs.innerHTML = '';
+  var div = document.createElement('div');
+  div.className = 'msg';
+  div.innerHTML = '<div class="msg-q">' + esc(q) + '</div><div class="msg-a"><span class="ispin"></span> 思考中...</div>';
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+
+  apiFetch('/api/ask', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ question: q })
+  }).then(function(d) {
+    if (d.detail) {
+      div.querySelector('.msg-a').innerHTML = '<span style="color:var(--red);">错误: ' + esc(d.detail) + '</span>';
+      return;
+    }
+    var answerHtml = (d.answer || '未获取到回答').replace(/\n/g, '<br>');
+    var h = '<div class="msg-a">' + answerHtml + '</div>';
+    if (d.cypher) h += '<div class="msg-cypher">' + esc(d.cypher) + '</div>';
+    var count = d.graph_data ? d.graph_data.length : 0;
+    h += '<div class="msg-meta">命中 ' + count + ' 条图谱数据</div>';
+    div.innerHTML = '<div class="msg-q">' + esc(q) + '</div>' + h;
+    msgs.scrollTop = msgs.scrollHeight;
+  }).catch(function(e) {
+    div.querySelector('.msg-a').innerHTML = '<span style="color:var(--red);">请求失败: ' + esc(e.message) + '</span>';
+  });
+}
+
+/* ──── Init ──── */
+
+loadRelCN();
+
+apiFetch('/api/graph/stats')
+  .then(function(d) {
+    var html = '';
+    var labels = { Person: '人物', Dynasty: '政权', Event: '事件', Place: '地点', Relation: '关系' };
+    Object.keys(d).forEach(function(k) {
+      html += '<div class="stat-item">' + (labels[k] || k) + ': <span>' + d[k] + '</span></div>';
+    });
+    $('stats-bar').innerHTML = html;
+  })
+  .catch(function() {});
+
+window.onerror = function(msg) { showErr('JS错误: ' + msg); return false; };
+</script>
+</body>
+</html>
