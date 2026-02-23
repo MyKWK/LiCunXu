@@ -110,6 +110,47 @@
 
   /* Events pane */
   .events-list { flex: 1; overflow-y: auto; padding: 10px; }
+
+  /* Edit buttons */
+  .edit-btn { background: rgba(59,130,246,0.2); color: var(--blue); border: 1px solid var(--blue); padding: 3px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; margin-left: 6px; transition: all 0.15s; }
+  .edit-btn:hover { background: var(--blue); color: white; }
+  .edit-btn-red { background: rgba(239,68,68,0.2); color: var(--red); border-color: var(--red); }
+  .edit-btn-red:hover { background: var(--red); color: white; }
+  .edit-btn-green { background: rgba(34,197,94,0.2); color: var(--green); border-color: var(--green); }
+  .edit-btn-green:hover { background: var(--green); color: white; }
+
+  /* Modal */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; }
+  .modal-overlay.show { display: flex; }
+  .modal { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; width: 480px; max-width: 90vw; max-height: 80vh; overflow-y: auto; }
+  .modal h3 { color: var(--amber); font-size: 16px; margin-bottom: 14px; }
+  .modal-row { margin-bottom: 10px; }
+  .modal-row label { display: block; font-size: 12px; color: #94a3b8; margin-bottom: 4px; }
+  .modal-row input, .modal-row select, .modal-row textarea { width: 100%; padding: 7px 10px; border: 1px solid #475569; border-radius: 5px; background: var(--bg); color: #e2e8f0; font-size: 13px; outline: none; font-family: inherit; }
+  .modal-row input:focus, .modal-row select:focus, .modal-row textarea:focus { border-color: var(--blue); }
+  .modal-row textarea { min-height: 60px; resize: vertical; }
+  .modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+  .modal-footer .btn { padding: 6px 16px; }
+  .alias-item { display: inline-flex; align-items: center; background: rgba(255,255,255,0.08); border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px 2px 8px; margin: 2px 4px 2px 0; font-size: 12px; }
+  .alias-item .alias-del { margin-left: 4px; cursor: pointer; color: var(--red); font-weight: bold; font-size: 14px; line-height: 1; }
+  .alias-item .alias-del:hover { color: #fca5a5; }
+  .alias-add-row { display: flex; gap: 4px; margin-top: 6px; }
+  .alias-add-row input { flex: 1; padding: 4px 8px; font-size: 12px; }
+
+  /* Confirm dialog */
+  .confirm-msg { font-size: 14px; color: #e2e8f0; line-height: 1.6; margin-bottom: 16px; }
+  .confirm-msg strong { color: var(--amber); }
+
+  /* Relation edit row */
+  .rel-edit-row { display: flex; align-items: center; gap: 4px; margin: 3px 0; font-size: 12px; padding: 4px 6px; border-radius: 4px; background: rgba(255,255,255,0.03); }
+  .rel-edit-row:hover { background: rgba(255,255,255,0.06); }
+  .rel-edit-name { color: #cbd5e1; cursor: pointer; min-width: 60px; }
+  .rel-edit-name:hover { color: var(--blue); }
+  .rel-edit-type { color: #64748b; font-size: 11px; flex: 1; }
+  .rel-edit-actions { display: flex; gap: 4px; }
+  .rel-mini-btn { background: none; border: 1px solid var(--border); color: #94a3b8; padding: 1px 6px; border-radius: 3px; font-size: 10px; cursor: pointer; }
+  .rel-mini-btn:hover { border-color: var(--blue); color: var(--blue); }
+  .rel-mini-btn.del:hover { border-color: var(--red); color: var(--red); }
 </style>
 </head>
 <body>
@@ -412,6 +453,216 @@ function onNodeClick(raw) {
   switchTab('detail');
 }
 
+/* ──── 全局关系类型列表（用于编辑下拉框） ──── */
+var ALL_REL_TYPES = [];
+function loadRelTypes() {
+  apiFetch('/api/graph/relation_types').then(function(d) {
+    ALL_REL_TYPES = d.types || [];
+  }).catch(function() {});
+}
+loadRelTypes();
+
+/* ──── 模态框管理 ──── */
+function showModal(html) {
+  var ov = document.getElementById('modal-overlay');
+  document.getElementById('modal-body').innerHTML = html;
+  ov.classList.add('show');
+}
+function hideModal() {
+  document.getElementById('modal-overlay').classList.remove('show');
+}
+
+/* ──── 确认删除弹窗 ──── */
+function confirmAction(msg, onConfirm) {
+  var h = '<div class="modal"><h3>⚠️ 确认操作</h3>';
+  h += '<div class="confirm-msg">' + msg + '</div>';
+  h += '<div class="modal-footer">';
+  h += '<button class="btn btn-ghost" onclick="hideModal()">取消</button>';
+  h += '<button class="btn btn-blue" id="confirm-ok-btn">确认</button>';
+  h += '</div></div>';
+  showModal(h);
+  document.getElementById('confirm-ok-btn').onclick = function() {
+    hideModal();
+    onConfirm();
+  };
+}
+
+/* ──── 删除节点 ──── */
+function deleteNode(uid, name) {
+  confirmAction('确定要删除节点 <strong>' + esc(name) + '</strong> 及其所有关系吗？此操作不可撤销！', function() {
+    apiFetch('/api/graph/node/' + uid, { method: 'DELETE' })
+      .then(function() {
+        showErr('✅ 已删除节点: ' + name);
+        $('detail-content').innerHTML = '<div class="empty">节点已删除</div>';
+        // 如果当前有图谱，尝试刷新
+        if (_currentPersonUid && _currentPersonUid !== uid) {
+          loadPersonGraph(_currentPersonUid, '');
+        }
+      })
+      .catch(function(e) { showErr('删除失败: ' + e.message); });
+  });
+}
+
+/* ──── 删除关系 ──── */
+function deleteRelation(sourceUid, targetUid, relType, displayInfo) {
+  confirmAction('确定要删除关系 <strong>' + esc(displayInfo) + '</strong> 吗？', function() {
+    apiFetch('/api/graph/relation/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ source_uid: sourceUid, target_uid: targetUid, rel_type: relType })
+    }).then(function() {
+      showErr('✅ 关系已删除');
+      // 刷新详情
+      if (_currentPersonUid) showPersonDetail(_currentPersonUid);
+    }).catch(function(e) { showErr('删除关系失败: ' + e.message); });
+  });
+}
+
+/* ──── 修改关系类型弹窗 ──── */
+function editRelationType(sourceUid, targetUid, oldRelType, otherName) {
+  var optionsHtml = ALL_REL_TYPES.map(function(t) {
+    var sel = t === oldRelType ? ' selected' : '';
+    return '<option value="' + esc(t) + '"' + sel + '>' + esc(t) + ' (' + relCN(t) + ')</option>';
+  }).join('');
+
+  var h = '<div class="modal"><h3>✏️ 修改关系类型</h3>';
+  h += '<div class="modal-row"><label>关系: ' + esc(otherName) + '</label></div>';
+  h += '<div class="modal-row"><label>当前类型</label><input value="' + esc(oldRelType) + ' (' + relCN(oldRelType) + ')" disabled></div>';
+  h += '<div class="modal-row"><label>新类型（选择已有或手动输入）</label>';
+  h += '<select id="edit-rel-select" onchange="document.getElementById(\'edit-rel-input\').value=this.value">' + optionsHtml + '</select></div>';
+  h += '<div class="modal-row"><label>或手动输入新类型（英文大写，如 FATHER_OF）</label>';
+  h += '<input id="edit-rel-input" value="' + esc(oldRelType) + '" placeholder="输入关系类型"></div>';
+  h += '<div class="modal-footer">';
+  h += '<button class="btn btn-ghost" onclick="hideModal()">取消</button>';
+  h += '<button class="btn btn-blue" onclick="doUpdateRelation(\'' + esc(sourceUid) + '\',\'' + esc(targetUid) + '\',\'' + esc(oldRelType) + '\')">保存</button>';
+  h += '</div></div>';
+  showModal(h);
+}
+
+function doUpdateRelation(sourceUid, targetUid, oldRelType) {
+  var newType = document.getElementById('edit-rel-input').value.trim().toUpperCase().replace(/\s+/g, '_');
+  if (!newType) { showErr('请输入新的关系类型'); return; }
+  if (newType === oldRelType) { hideModal(); return; }
+  hideModal();
+  apiFetch('/api/graph/relation/update', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ source_uid: sourceUid, target_uid: targetUid, old_rel_type: oldRelType, new_rel_type: newType })
+  }).then(function() {
+    showErr('✅ 关系已修改为 ' + newType);
+    loadRelTypes(); // 刷新关系类型列表
+    if (_currentPersonUid) showPersonDetail(_currentPersonUid);
+  }).catch(function(e) { showErr('修改关系失败: ' + e.message); });
+}
+
+/* ──── 新增关系弹窗 ──── */
+function addRelationDialog(personUid, personName) {
+  var optionsHtml = ALL_REL_TYPES.map(function(t) {
+    return '<option value="' + esc(t) + '">' + esc(t) + ' (' + relCN(t) + ')</option>';
+  }).join('');
+
+  var h = '<div class="modal"><h3>➕ 为 ' + esc(personName) + ' 新增关系</h3>';
+  h += '<div class="modal-row"><label>目标人物名字（搜索已有节点）</label>';
+  h += '<input id="add-rel-target" placeholder="输入目标人物名字，如：李克用"></div>';
+  h += '<div class="modal-row"><label>关系类型</label>';
+  h += '<select id="add-rel-type-select" onchange="document.getElementById(\'add-rel-type-input\').value=this.value">' + optionsHtml + '</select></div>';
+  h += '<div class="modal-row"><label>或手动输入关系类型</label>';
+  h += '<input id="add-rel-type-input" placeholder="如 FATHER_OF"></div>';
+  h += '<div class="modal-row"><label>关系方向</label>';
+  h += '<select id="add-rel-dir"><option value="outgoing">' + esc(personName) + ' → 目标</option><option value="incoming">目标 → ' + esc(personName) + '</option></select></div>';
+  h += '<div class="modal-row"><label>描述（可选）</label>';
+  h += '<input id="add-rel-desc" placeholder="关系描述"></div>';
+  h += '<div class="modal-footer">';
+  h += '<button class="btn btn-ghost" onclick="hideModal()">取消</button>';
+  h += '<button class="btn btn-blue" onclick="doAddRelation(\'' + esc(personUid) + '\')">添加</button>';
+  h += '</div></div>';
+  showModal(h);
+}
+
+function doAddRelation(personUid) {
+  var targetName = document.getElementById('add-rel-target').value.trim();
+  var relType = document.getElementById('add-rel-type-input').value.trim().toUpperCase().replace(/\s+/g, '_');
+  if (!relType) relType = document.getElementById('add-rel-type-select').value;
+  var dir = document.getElementById('add-rel-dir').value;
+  var desc = document.getElementById('add-rel-desc').value.trim();
+
+  if (!targetName) { showErr('请输入目标人物名字'); return; }
+  if (!relType) { showErr('请选择或输入关系类型'); return; }
+
+  // 先搜索目标人物获取 uid
+  hideModal();
+  apiFetch('/api/graph/search/person', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: targetName })
+  }).then(function(d) {
+    var results = d.results || [];
+    if (!results.length) { showErr('未找到目标人物: ' + targetName); return; }
+    var targetUid = results[0].uid;
+    var srcUid = dir === 'outgoing' ? personUid : targetUid;
+    var tgtUid = dir === 'outgoing' ? targetUid : personUid;
+    return apiFetch('/api/graph/relation/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ source_uid: srcUid, target_uid: tgtUid, rel_type: relType, description: desc })
+    });
+  }).then(function(r) {
+    if (r) {
+      showErr('✅ 关系已添加');
+      loadRelTypes();
+      if (_currentPersonUid) showPersonDetail(_currentPersonUid);
+    }
+  }).catch(function(e) { showErr('添加关系失败: ' + e.message); });
+}
+
+/* ──── 编辑别名弹窗 ──── */
+var _editAliases = [];
+function editAliasesDialog(personUid, personName, currentAliases) {
+  _editAliases = (currentAliases || []).slice();
+  renderAliasEditor(personUid, personName);
+}
+
+function renderAliasEditor(personUid, personName) {
+  var h = '<div class="modal"><h3>✏️ 编辑别名 - ' + esc(personName) + '</h3>';
+  h += '<div class="modal-row"><label>当前别名列表</label><div id="alias-list">';
+  _editAliases.forEach(function(a, i) {
+    h += '<span class="alias-item">' + esc(a) + '<span class="alias-del" onclick="removeAlias(' + i + ',\'' + esc(personUid) + '\',\'' + esc(personName) + '\')">&times;</span></span>';
+  });
+  if (!_editAliases.length) h += '<span style="color:#64748b;font-size:12px;">无别名</span>';
+  h += '</div></div>';
+  h += '<div class="modal-row"><label>添加新别名</label><div class="alias-add-row"><input id="new-alias-input" placeholder="输入别名" onkeydown="if(event.key===\'Enter\')addAliasItem(\'' + esc(personUid) + '\',\'' + esc(personName) + '\')"><button class="btn btn-ghost" style="padding:4px 10px;font-size:12px;" onclick="addAliasItem(\'' + esc(personUid) + '\',\'' + esc(personName) + '\')">+</button></div></div>';
+  h += '<div class="modal-footer">';
+  h += '<button class="btn btn-ghost" onclick="hideModal()">取消</button>';
+  h += '<button class="btn btn-blue" onclick="saveAliases(\'' + esc(personUid) + '\')">保存</button>';
+  h += '</div></div>';
+  showModal(h);
+}
+
+function removeAlias(idx, uid, name) {
+  _editAliases.splice(idx, 1);
+  renderAliasEditor(uid, name);
+}
+
+function addAliasItem(uid, name) {
+  var v = document.getElementById('new-alias-input').value.trim();
+  if (v && _editAliases.indexOf(v) === -1) {
+    _editAliases.push(v);
+    renderAliasEditor(uid, name);
+  }
+}
+
+function saveAliases(uid) {
+  hideModal();
+  apiFetch('/api/graph/person/aliases', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ uid: uid, aliases: _editAliases })
+  }).then(function() {
+    showErr('✅ 别名已更新');
+    if (_currentPersonUid) showPersonDetail(_currentPersonUid);
+  }).catch(function(e) { showErr('更新别名失败: ' + e.message); });
+}
+
 function showPersonDetail(uid) {
   if (!uid) return;
   var el = $('detail-content');
@@ -425,7 +676,12 @@ function showPersonDetail(uid) {
       if (p.role) h += '<span class="badge">' + esc(p.role) + '</span>';
       h += '</div>';
 
-      if (p.aliases && p.aliases.length) h += '<div class="detail-row"><span class="lbl">别名：</span>' + esc(p.aliases.join('、')) + '</div>';
+      if (p.aliases && p.aliases.length) {
+        window._lastAliases = p.aliases;
+        h += '<div class="detail-row"><span class="lbl">别名：</span>' + esc(p.aliases.join('、')) + '<button class="edit-btn" onclick="editAliasesDialog(\'' + esc(uid) + '\',\'' + esc(p.name) + '\', window._lastAliases)">编辑别名</button></div>';
+      } else {
+        h += '<div class="detail-row"><span class="lbl">别名：</span>无 <button class="edit-btn" onclick="editAliasesDialog(\'' + esc(uid) + '\',\'' + esc(p.name) + '\',[])">添加别名</button></div>';
+      }
       if (p.loyalty && p.loyalty.length) h += '<div class="detail-row"><span class="lbl">势力：</span>' + esc(p.loyalty.join(' → ')) + '</div>';
       if (p.birth_year || p.death_year) h += '<div class="detail-row"><span class="lbl">生卒：</span>' + (p.birth_year || '?') + ' — ' + (p.death_year || '?') + '</div>';
       if (p.death_cause) h += '<div class="detail-row"><span class="lbl">死因：</span>' + esc(p.death_cause) + '</div>';
@@ -436,17 +692,26 @@ function showPersonDetail(uid) {
       h += '<div id="person-summary-box" class="summary-box"><div class="summary-loading"><span class="ispin"></span> AI 生成中...</div></div>';
       h += '</div>';
 
-      // Relations (中文化)
+      // Relations (中文化 + 编辑按钮)
+      h += '<div class="detail-section"><h4>人物关系 (' + (d.relations ? d.relations.length : 0) + ') <button class="edit-btn edit-btn-green" onclick="addRelationDialog(\'' + esc(uid) + '\',\'' + esc(p.name) + '\')">＋新增关系</button></h4>';
       if (d.relations && d.relations.length) {
-        h += '<div class="detail-section"><h4>人物关系 (' + d.relations.length + ')</h4><div>';
         d.relations.forEach(function(r) {
           var arrow = r.direction === 'outgoing' ? '→' : '←';
           var cnType = relCN(r.rel_type);
-          h += '<span class="rel-tag" onclick="searchAndShow(\'' + esc(r.other_name) + '\')">' +
-               esc(r.other_name) + ' <span class="rtype">' + arrow + ' ' + esc(cnType) + '</span></span>';
+          var srcUid = r.direction === 'outgoing' ? uid : r.other_uid;
+          var tgtUid = r.direction === 'outgoing' ? r.other_uid : uid;
+          h += '<div class="rel-edit-row">';
+          h += '<span class="rel-edit-name" onclick="searchAndShow(\'' + esc(r.other_name) + '\')">' + esc(r.other_name) + '</span>';
+          h += '<span class="rel-edit-type">' + arrow + ' ' + esc(cnType) + '</span>';
+          h += '<span class="rel-edit-actions">';
+          h += '<button class="rel-mini-btn" onclick="editRelationType(\'' + esc(srcUid) + '\',\'' + esc(tgtUid) + '\',\'' + esc(r.rel_type) + '\',\'' + esc(r.other_name) + '\')">改</button>';
+          h += '<button class="rel-mini-btn del" onclick="deleteRelation(\'' + esc(srcUid) + '\',\'' + esc(tgtUid) + '\',\'' + esc(r.rel_type) + '\',\'' + esc(r.other_name + ' ' + cnType) + '\')">删</button>';
+          h += '</span></div>';
         });
-        h += '</div></div>';
+      } else {
+        h += '<div style="color:#64748b;font-size:12px;padding:4px;">暂无关系</div>';
       }
+      h += '</div>';
 
       // Events
       if (d.events && d.events.length) {
@@ -461,6 +726,11 @@ function showPersonDetail(uid) {
         });
         h += '</div>';
       }
+
+      // 编辑操作按钮区
+      h += '<div class="detail-section" style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px;">';
+      h += '<button class="edit-btn edit-btn-red" onclick="deleteNode(\'' + esc(uid) + '\',\'' + esc(p.name) + '\')">🗑️ 删除此人物</button>';
+      h += '</div>';
 
       el.innerHTML = h;
       _currentPersonUid = uid;
@@ -531,6 +801,11 @@ function showEventDetail(uid) {
         });
         h += '</div>';
       }
+
+      // 编辑操作按钮区
+      h += '<div class="detail-section" style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px;">';
+      h += '<button class="edit-btn edit-btn-red" onclick="deleteNode(\'' + esc(uid) + '\',\'' + esc(e.name) + '\')">🗑️ 删除此事件</button>';
+      h += '</div>';
 
       el.innerHTML = h;
 
@@ -720,5 +995,11 @@ apiFetch('/api/graph/stats')
 
 window.onerror = function(msg) { showErr('JS错误: ' + msg); return false; };
 </script>
+
+<!-- 全局模态框 -->
+<div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)hideModal()">
+  <div id="modal-body"></div>
+</div>
+
 </body>
 </html>

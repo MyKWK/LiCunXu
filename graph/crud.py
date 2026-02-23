@@ -565,5 +565,172 @@ class GraphCRUD:
         """
         return neo4j_conn.run_query(cypher, {"uid": person_uid})
 
+    # ━━━━━━━━━━━━━━━ 编辑操作：删除/更新 ━━━━━━━━━━━━━━━
+
+    @staticmethod
+    def delete_node(uid: str) -> bool:
+        """删除节点及其所有关系（适用于任意类型的节点）
+
+        Args:
+            uid: 节点的唯一标识符
+
+        Returns:
+            是否成功删除
+        """
+        # 先确认节点存在
+        check = neo4j_conn.run_query(
+            "MATCH (n {uid: $uid}) RETURN n.uid AS uid, labels(n) AS labels", {"uid": uid}
+        )
+        if not check:
+            logger.warning(f"删除节点失败：节点不存在 [{uid}]")
+            return False
+
+        # DETACH DELETE 会同时删除节点及其所有关系
+        neo4j_conn.run_write("MATCH (n {uid: $uid}) DETACH DELETE n", {"uid": uid})
+        labels = check[0].get("labels", [])
+        logger.info(f"已删除节点 [{uid}] (类型: {labels})")
+        return True
+
+    @staticmethod
+    def delete_relation(source_uid: str, target_uid: str, rel_type: str) -> bool:
+        """删除两个节点之间的指定类型关系
+
+        Args:
+            source_uid: 源节点 uid
+            target_uid: 目标节点 uid
+            rel_type: 关系类型（英文大写，如 FATHER_OF）
+
+        Returns:
+            是否成功删除
+        """
+        # 清洗关系类型
+        safe_type = "".join(c if c.isalnum() or c == "_" else "_" for c in rel_type)
+        if not safe_type:
+            return False
+
+        cypher = f"""
+        MATCH (a {{uid: $source_uid}})-[r:{safe_type}]->(b {{uid: $target_uid}})
+        DELETE r
+        RETURN count(r) AS cnt
+        """
+        try:
+            neo4j_conn.run_write(cypher, {"source_uid": source_uid, "target_uid": target_uid})
+            logger.info(f"已删除关系 [{source_uid}]-[{safe_type}]->[{target_uid}]")
+            return True
+        except Exception as e:
+            logger.warning(f"删除关系失败: {e}")
+            return False
+
+    @staticmethod
+    def add_relation(source_uid: str, target_uid: str, rel_type: str, description: str = "") -> bool:
+        """在两个已有节点之间新增关系
+
+        Args:
+            source_uid: 源节点 uid
+            target_uid: 目标节点 uid
+            rel_type: 关系类型（英文大写）
+            description: 关系描述
+
+        Returns:
+            是否成功
+        """
+        safe_type = rel_type.upper().replace(" ", "_").replace("-", "_")
+        safe_type = "".join(c if c.isalnum() or c == "_" else "_" for c in safe_type)
+        if not safe_type:
+            safe_type = "RELATED_TO"
+
+        cypher = f"""
+        MATCH (a {{uid: $source_uid}})
+        MATCH (b {{uid: $target_uid}})
+        MERGE (a)-[r:{safe_type}]->(b)
+        SET r.description = $desc
+        """
+        try:
+            neo4j_conn.run_write(cypher, {
+                "source_uid": source_uid,
+                "target_uid": target_uid,
+                "desc": description,
+            })
+            logger.info(f"已新增关系 [{source_uid}]-[{safe_type}]->[{target_uid}]")
+            return True
+        except Exception as e:
+            logger.warning(f"新增关系失败: {e}")
+            return False
+
+    @staticmethod
+    def update_relation(source_uid: str, target_uid: str, old_rel_type: str, new_rel_type: str, description: str = "") -> bool:
+        """修改两个节点之间的关系类型（先删旧关系，再建新关系）
+
+        Args:
+            source_uid: 源节点 uid
+            target_uid: 目标节点 uid
+            old_rel_type: 原关系类型
+            new_rel_type: 新关系类型
+            description: 新关系描述
+
+        Returns:
+            是否成功
+        """
+        # 先获取旧关系的属性
+        old_safe = "".join(c if c.isalnum() or c == "_" else "_" for c in old_rel_type)
+        if not old_safe:
+            return False
+
+        # 删除旧关系
+        deleted = GraphCRUD.delete_relation(source_uid, target_uid, old_rel_type)
+        if not deleted:
+            # 尝试反方向
+            deleted = GraphCRUD.delete_relation(target_uid, source_uid, old_rel_type)
+
+        # 创建新关系
+        added = GraphCRUD.add_relation(source_uid, target_uid, new_rel_type, description)
+        logger.info(f"已修改关系 [{source_uid}]-[{old_rel_type}→{new_rel_type}]->[{target_uid}]")
+        return added
+
+    @staticmethod
+    def update_person_aliases(person_uid: str, aliases: list[str]) -> bool:
+        """更新人物的别名列表
+
+        Args:
+            person_uid: 人物 uid
+            aliases: 新的别名列表
+
+        Returns:
+            是否成功
+        """
+        # 去除空字符串和重复
+        clean_aliases = sorted(set(a.strip() for a in aliases if a.strip()))
+
+        cypher = """
+        MATCH (p:Person {uid: $uid})
+        SET p.aliases = $aliases
+        RETURN p.uid AS uid
+        """
+        results = neo4j_conn.run_query(cypher, {"uid": person_uid})
+        if not results:
+            # run_query 可能不适用于写操作，改用 run_write
+            neo4j_conn.run_write(
+                "MATCH (p:Person {uid: $uid}) SET p.aliases = $aliases",
+                {"uid": person_uid, "aliases": clean_aliases}
+            )
+        else:
+            neo4j_conn.run_write(
+                "MATCH (p:Person {uid: $uid}) SET p.aliases = $aliases",
+                {"uid": person_uid, "aliases": clean_aliases}
+            )
+        logger.info(f"已更新人物别名 [{person_uid}]: {clean_aliases}")
+        return True
+
+    @staticmethod
+    def get_all_relation_types() -> list[str]:
+        """获取图谱中所有已使用的关系类型"""
+        cypher = """
+        CALL db.relationshipTypes() YIELD relationshipType
+        RETURN relationshipType
+        ORDER BY relationshipType
+        """
+        results = neo4j_conn.run_query(cypher)
+        return [r["relationshipType"] for r in results]
+
 
 graph_crud = GraphCRUD()

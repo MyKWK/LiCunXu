@@ -52,6 +52,38 @@ class SeedLoadRequest(BaseModel):
     clear_first: bool = False
 
 
+# ─── 编辑操作请求模型 ───
+
+class DeleteNodeRequest(BaseModel):
+    uid: str
+
+
+class DeleteRelationRequest(BaseModel):
+    source_uid: str
+    target_uid: str
+    rel_type: str
+
+
+class AddRelationRequest(BaseModel):
+    source_uid: str
+    target_uid: str
+    rel_type: str
+    description: str = ""
+
+
+class UpdateRelationRequest(BaseModel):
+    source_uid: str
+    target_uid: str
+    old_rel_type: str
+    new_rel_type: str
+    description: str = ""
+
+
+class UpdateAliasesRequest(BaseModel):
+    uid: str
+    aliases: list[str]
+
+
 # ─────────────────── API 路由 ───────────────────
 
 
@@ -343,6 +375,98 @@ def _search_book_snippets(event_name: str, description: str | None = None,
                 pos = idx + len(kw) + context_chars
 
     return snippets[:max_snippets]
+
+
+# ─────────────────── 图谱编辑接口 ───────────────────
+
+
+@app.delete("/api/graph/node/{uid}")
+async def delete_node(uid: str):
+    """删除节点及其所有关系"""
+    from graph.crud import graph_crud
+    try:
+        success = graph_crud.delete_node(uid)
+        if not success:
+            raise HTTPException(status_code=404, detail="节点不存在")
+        return {"message": "删除成功", "uid": uid}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/graph/relation/delete")
+async def delete_relation(req: DeleteRelationRequest):
+    """删除指定关系"""
+    from graph.crud import graph_crud
+    try:
+        success = graph_crud.delete_relation(req.source_uid, req.target_uid, req.rel_type)
+        if not success:
+            raise HTTPException(status_code=404, detail="关系不存在或删除失败")
+        return {"message": "关系删除成功"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/graph/relation/add")
+async def add_relation(req: AddRelationRequest):
+    """新增关系"""
+    from graph.crud import graph_crud
+    try:
+        success = graph_crud.add_relation(req.source_uid, req.target_uid, req.rel_type, req.description)
+        if not success:
+            raise HTTPException(status_code=400, detail="新增关系失败")
+        return {"message": "关系新增成功"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/graph/relation/update")
+async def update_relation(req: UpdateRelationRequest):
+    """修改关系类型"""
+    from graph.crud import graph_crud
+    try:
+        success = graph_crud.update_relation(
+            req.source_uid, req.target_uid,
+            req.old_rel_type, req.new_rel_type, req.description
+        )
+        if not success:
+            raise HTTPException(status_code=400, detail="修改关系失败")
+        return {"message": "关系修改成功"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/graph/person/aliases")
+async def update_aliases(req: UpdateAliasesRequest):
+    """更新人物别名"""
+    from graph.crud import graph_crud
+    try:
+        success = graph_crud.update_person_aliases(req.uid, req.aliases)
+        if not success:
+            raise HTTPException(status_code=400, detail="更新别名失败")
+        return {"message": "别名更新成功"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/graph/relation_types")
+async def get_relation_types():
+    """获取所有已使用的关系类型"""
+    from graph.crud import graph_crud
+    try:
+        types = graph_crud.get_all_relation_types()
+        return {"types": types}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ─────────────────── 关系类型英→中映射 ───────────────────
