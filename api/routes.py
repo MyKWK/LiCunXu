@@ -94,6 +94,13 @@ async def index():
     return get_index_html()
 
 
+@app.get("/fanzhen", response_class=HTMLResponse)
+async def fanzhen():
+    """返回唐代藩镇官职系统树状图页面"""
+    html_path = Path(__file__).resolve().parent.parent / "static" / "fanzhen.html"
+    return html_path.read_text(encoding="utf-8")
+
+
 @app.get("/api/health")
 async def health():
     """健康检查"""

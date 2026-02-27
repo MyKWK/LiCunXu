@@ -151,6 +151,15 @@
   .rel-mini-btn { background: none; border: 1px solid var(--border); color: #94a3b8; padding: 1px 6px; border-radius: 3px; font-size: 10px; cursor: pointer; }
   .rel-mini-btn:hover { border-color: var(--blue); color: var(--blue); }
   .rel-mini-btn.del:hover { border-color: var(--red); color: var(--red); }
+
+  /* 藩镇官职系统覆盖层 */
+  .fanzhen-overlay { display: none; position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,0.7); }
+  .fanzhen-overlay.show { display: flex; flex-direction: column; }
+  .fanzhen-bar { height: 40px; background: var(--card); display: flex; align-items: center; justify-content: space-between; padding: 0 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .fanzhen-bar h3 { font-size: 14px; color: #ffd700; }
+  .fanzhen-bar .fz-close { background: none; border: 1px solid #475569; color: #94a3b8; padding: 3px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+  .fanzhen-bar .fz-close:hover { border-color: var(--red); color: var(--red); }
+  .fanzhen-frame { flex: 1; border: none; width: 100%; }
 </style>
 </head>
 <body>
@@ -174,6 +183,7 @@
       <button class="btn btn-ghost" onclick="searchAndShow('石敬瑭')">石敬瑭</button>
       <button class="btn btn-ghost" onclick="searchAndShow('郭威')">郭威</button>
       <button class="btn btn-ghost" onclick="searchAndShow('赵匡胤')">赵匡胤</button>
+      <button class="btn btn-amber" onclick="openFanzhen()">🏯 藩镇官职</button>
       <div class="search-group">
         <input id="search-input" placeholder="搜索人物..." onkeydown="if(event.key==='Enter')doSearch()">
         <button class="btn btn-blue" onclick="doSearch()">搜索</button>
@@ -994,7 +1004,27 @@ apiFetch('/api/graph/stats')
   .catch(function() {});
 
 window.onerror = function(msg) { showErr('JS错误: ' + msg); return false; };
+
+/* ──── 藩镇官职系统 ──── */
+function openFanzhen() {
+  var ov = document.getElementById('fanzhen-overlay');
+  var frame = document.getElementById('fanzhen-frame');
+  if (!frame.src || frame.src === 'about:blank') { frame.src = '/fanzhen'; }
+  ov.classList.add('show');
+}
+function closeFanzhen() {
+  document.getElementById('fanzhen-overlay').classList.remove('show');
+}
 </script>
+
+<!-- 藩镇官职系统覆盖层 -->
+<div class="fanzhen-overlay" id="fanzhen-overlay">
+  <div class="fanzhen-bar">
+    <h3>🏯 唐代藩镇官职系统 — 据张国刚《唐代藩镇研究》整理</h3>
+    <button class="fz-close" onclick="closeFanzhen()">✕ 关闭</button>
+  </div>
+  <iframe class="fanzhen-frame" id="fanzhen-frame"></iframe>
+</div>
 
 <!-- 全局模态框 -->
 <div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)hideModal()">
