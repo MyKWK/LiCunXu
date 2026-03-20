@@ -70,6 +70,13 @@ class IngestionPipeline:
             except Exception as e:
                 logger.warning(f"地点写入失败 [{place.name}]: {e}")
 
+        # 2.5 写入官职
+        for title in result.official_titles:
+            try:
+                graph_crud.merge_official_title(title)
+            except Exception as e:
+                logger.warning(f"官职写入失败 [{title.name}]: {e}")
+
         # 3. 写入人物（核心：走 merge_person 智能合并）
         for person in result.persons:
             try:
@@ -107,6 +114,7 @@ class IngestionPipeline:
         logger.info(
             f"  写入: {len(result.persons)}人物, {len(result.dynasties)}政权, "
             f"{len(result.events)}事件, {len(result.places)}地点, "
+            f"{len(result.official_titles)}官职, "
             f"{rel_ok}关系成功/{rel_fail}失败"
         )
 
@@ -138,6 +146,12 @@ class IngestionPipeline:
             self._load_progress()
 
         init_constraints()
+
+        # 写入种子官职（幂等，确保权威数据始终存在）
+        try:
+            graph_crud.seed_official_titles()
+        except Exception as e:
+            logger.warning(f"种子官职写入失败: {e}")
 
         # Step 2: 文本预处理（或加载已有块）
         chunks_file = settings.PROCESSED_DATA_DIR / "chunks.json"

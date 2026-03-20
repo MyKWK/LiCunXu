@@ -20,7 +20,7 @@ python3 -m venv .venv
 source .venv/bin/activate    # Windows: .venv\Scripts\activate
 pip install -e .
 
-# 3. 配置环境变量（至少填写 NEO4J_PASSWORD 和 DEEPSEEK_API_KEY）
+# 3. 配置环境变量（至少填写 NEO4J_PASSWORD 和 LLM_API_KEY）
 cp .env.example .env
 vi .env                      # 或用任何编辑器打开
 
@@ -166,12 +166,12 @@ python main.py
 | `NEO4J_URI` | Neo4j 连接地址 | 可选（默认 `bolt://localhost:7687`） |
 | `NEO4J_USER` | Neo4j 用户名 | 可选（默认 `neo4j`） |
 | `NEO4J_PASSWORD` | Neo4j 密码 | 推荐配置 |
-| `LLM_API_KEY` | 维纳斯平台 API Key（数据摄入阶段使用） | 仅摄入时需要 |
-| `LLM_API_BASE` | 维纳斯平台 API 地址 | 仅摄入时需要 |
-| `LLM_MODEL_NAME` | 维纳斯平台模型名 | 可选 |
-| `DEEPSEEK_API_KEY` | DeepSeek API Key（问答 + LLM 总结） | **必填** |
-| `DEEPSEEK_API_BASE` | DeepSeek API 地址 | 可选（默认 `https://api.deepseek.com`） |
-| `DEEPSEEK_MODEL` | DeepSeek 模型名 | 可选（默认 `deepseek-chat`） |
+| `LLM_API_KEY` | 维纳斯平台 API Key（Cypher 生成 / 数据摄入） | **必填** |
+| `LLM_API_BASE` | 维纳斯平台 API 地址 | 可选（默认 Venus） |
+| `LLM_MODEL_NAME` | 维纳斯平台模型名 | 可选（默认 `deepseek-v3.2`） |
+| `QA_LLM_API_KEY` | 维纳斯平台 QA API Key（问答 + LLM 总结） | **必填**（可与 `LLM_API_KEY` 相同） |
+| `QA_LLM_API_BASE` | 维纳斯平台 QA API 地址 | 可选（默认 Venus） |
+| `QA_LLM_MODEL` | QA 模型名 | 可选（默认 `glm-5`） |
 | `EMBEDDING_MODEL_NAME` | 本地 Embedding 模型 | 可选（默认 `BAAI/bge-small-zh-v1.5`） |
 | `APP_HOST` / `APP_PORT` | Web 服务地址和端口 | 可选（默认 `0.0.0.0:8000`） |
 
@@ -724,7 +724,7 @@ LiCunXu/
 │
 ├── config/                 # 配置管理
 │   ├── settings.py         # 全局配置（Pydantic-Settings，支持 .env 加载）
-│   └── llm_client.py       # LLM 客户端（VenusLLM + DeepSeekLLM 双引擎）
+│   └── llm_client.py       # LLM 客户端（VenusLLM + VenusQALLM 双引擎）
 │
 ├── models/                 # 数据模型
 │   └── entities.py         # Pydantic 实体定义（Person/Dynasty/Event/Place/Relation）

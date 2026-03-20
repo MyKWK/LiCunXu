@@ -14,7 +14,7 @@
 
 from loguru import logger
 
-from models.entities import Dynasty, Event, Person, Place, Relation
+from models.entities import Dynasty, Event, OfficialTitle, Person, Place, Relation
 from graph.connection import neo4j_conn
 
 
@@ -246,8 +246,12 @@ class GraphCRUD:
         if results:
             return results[0]["uid"]
 
-        # 2. 查 Dynasty
-        cypher = "MATCH (d:Dynasty) WHERE d.name = $name RETURN d.uid AS uid LIMIT 1"
+        # 2. 查 Dynasty（name 或 aliases）
+        cypher = """
+        MATCH (d:Dynasty)
+        WHERE d.name = $name OR $name IN d.aliases
+        RETURN d.uid AS uid LIMIT 1
+        """
         results = neo4j_conn.run_query(cypher, {"name": name})
         if results:
             return results[0]["uid"]
@@ -260,6 +264,16 @@ class GraphCRUD:
 
         # 4. 查 Place
         cypher = "MATCH (pl:Place) WHERE pl.name = $name RETURN pl.uid AS uid LIMIT 1"
+        results = neo4j_conn.run_query(cypher, {"name": name})
+        if results:
+            return results[0]["uid"]
+
+        # 5. 查 OfficialTitle（name 或 aliases）
+        cypher = """
+        MATCH (t:OfficialTitle)
+        WHERE t.name = $name OR $name IN t.aliases
+        RETURN t.uid AS uid LIMIT 1
+        """
         results = neo4j_conn.run_query(cypher, {"name": name})
         if results:
             return results[0]["uid"]
@@ -294,8 +308,137 @@ class GraphCRUD:
         neo4j_conn.run_write(cypher, {"uid": uid, "props": props})
 
     @staticmethod
+    def find_dynasty_by_any_name(names: set[str]) -> dict | None:
+        """通过任意名字（name 或 aliases）查找已有政权/势力节点
+
+        Args:
+            names: 要查找的名字集合
+
+        Returns:
+            匹配到的政权记录 dict，或 None
+        """
+        if not names:
+            return None
+        names_list = sorted(n for n in names if n)
+        if not names_list:
+            return None
+
+        # 优先用 name 精确匹配
+        cypher_exact = """
+        MATCH (d:Dynasty)
+        WHERE d.name IN $names
+        RETURN d.uid AS uid, d.name AS name, d.aliases AS aliases,
+               d.faction_type AS faction_type, d.founder AS founder,
+               d.capital AS capital, d.start_year AS start_year,
+               d.end_year AS end_year, d.predecessor AS predecessor,
+               d.description AS description
+        LIMIT 1
+        """
+        results = neo4j_conn.run_query(cypher_exact, {"names": names_list})
+        if results:
+            return results[0]
+
+        # 再用 aliases 匹配
+        cypher_alias = """
+        MATCH (d:Dynasty)
+        WHERE any(alias IN d.aliases WHERE alias IN $names)
+        RETURN d.uid AS uid, d.name AS name, d.aliases AS aliases,
+               d.faction_type AS faction_type, d.founder AS founder,
+               d.capital AS capital, d.start_year AS start_year,
+               d.end_year AS end_year, d.predecessor AS predecessor,
+               d.description AS description
+        LIMIT 1
+        """
+        results = neo4j_conn.run_query(cypher_alias, {"names": names_list})
+        return results[0] if results else None
+
+    @staticmethod
+    def merge_dynasty(dynasty: Dynasty) -> str:
+        """智能合并政权/势力节点
+
+        流程：
+        1. 收集新势力的所有名字（name + aliases）
+        2. 在 Neo4j 中查找是否有匹配
+        3. 如果找到 → 合并别名、更新信息
+        4. 如果没找到 → 创建新节点
+
+        Returns:
+            最终使用的 uid
+        """
+        all_names = dynasty.all_names()
+        existing = GraphCRUD.find_dynasty_by_any_name(all_names)
+
+        if existing:
+            # ────── 合并到已有节点 ──────
+            existing_uid = existing["uid"]
+            existing_aliases = set(existing.get("aliases") or [])
+            existing_aliases.add(existing.get("name", ""))
+
+            new_aliases = existing_aliases | all_names
+            final_name = existing.get("name")
+            new_aliases.discard(final_name)
+            new_aliases.discard("")
+
+            # 合并 description（取更长的）
+            existing_desc = existing.get("description") or ""
+            new_desc = dynasty.description or ""
+            final_desc = new_desc if len(new_desc) > len(existing_desc) else existing_desc
+
+            update_cypher = """
+            MATCH (d:Dynasty {uid: $uid})
+            SET d.aliases = $aliases,
+                d.description = $desc
+            """
+            params = {
+                "uid": existing_uid,
+                "aliases": sorted(new_aliases),
+                "desc": final_desc,
+            }
+
+            # 补充缺失字段
+            if dynasty.founder and not existing.get("founder"):
+                update_cypher += ", d.founder = $founder"
+                params["founder"] = dynasty.founder
+            if dynasty.capital and not existing.get("capital"):
+                update_cypher += ", d.capital = $capital"
+                params["capital"] = dynasty.capital
+            if dynasty.start_year is not None and existing.get("start_year") is None:
+                update_cypher += ", d.start_year = $start_year"
+                params["start_year"] = dynasty.start_year
+            if dynasty.end_year is not None and existing.get("end_year") is None:
+                update_cypher += ", d.end_year = $end_year"
+                params["end_year"] = dynasty.end_year
+            if dynasty.predecessor and not existing.get("predecessor"):
+                update_cypher += ", d.predecessor = $predecessor"
+                params["predecessor"] = dynasty.predecessor
+            if dynasty.faction_type and dynasty.faction_type != "其他" and existing.get("faction_type") in (None, "其他", ""):
+                update_cypher += ", d.faction_type = $faction_type"
+                params["faction_type"] = dynasty.faction_type
+
+            neo4j_conn.run_write(update_cypher, params)
+            logger.debug(
+                f"合并势力 [{dynasty.name}] → 已有节点 [{final_name}] "
+                f"(uid={existing_uid}), 新别名: {new_aliases - existing_aliases}"
+            )
+            return existing_uid
+        else:
+            # ────── 创建新节点 ──────
+            cypher = """
+            MERGE (d:Dynasty {uid: $uid})
+            SET d += $props
+            """
+            props = dynasty.neo4j_properties()
+            uid = props.pop("uid")
+            neo4j_conn.run_write(cypher, {"uid": uid, "props": props})
+            logger.debug(
+                f"新建势力 [{dynasty.name}] (uid={uid}, 类型={dynasty.faction_type}), "
+                f"别名: {dynasty.aliases}"
+            )
+            return uid
+
+    @staticmethod
     def upsert_dynasty(dynasty: Dynasty):
-        """创建或更新政权节点"""
+        """创建或更新政权节点（简单模式，仅按 uid 合并）"""
         cypher = """
         MERGE (d:Dynasty {uid: $uid})
         SET d += $props
@@ -326,6 +469,225 @@ class GraphCRUD:
         uid = props.pop("uid")
         neo4j_conn.run_write(cypher, {"uid": uid, "props": props})
 
+    # ━━━━━━━━━━━━━━━ 官职 CRUD ━━━━━━━━━━━━━━━
+
+    @staticmethod
+    def find_title_by_any_name(names: set[str]) -> dict | None:
+        """通过任意名字（name 或 aliases）查找已有官职节点
+
+        Args:
+            names: 要查找的名字集合
+
+        Returns:
+            匹配到的官职记录 dict，或 None
+        """
+        if not names:
+            return None
+        names_list = sorted(n for n in names if n)
+        if not names_list:
+            return None
+
+        # 优先用 name 精确匹配
+        cypher_exact = """
+        MATCH (t:OfficialTitle)
+        WHERE t.name IN $names
+        RETURN t.uid AS uid, t.name AS name, t.aliases AS aliases,
+               t.category AS category, t.rank AS rank,
+               t.description AS description, t.source AS source
+        LIMIT 1
+        """
+        results = neo4j_conn.run_query(cypher_exact, {"names": names_list})
+        if results:
+            return results[0]
+
+        # 再用 aliases 匹配
+        cypher_alias = """
+        MATCH (t:OfficialTitle)
+        WHERE any(alias IN t.aliases WHERE alias IN $names)
+        RETURN t.uid AS uid, t.name AS name, t.aliases AS aliases,
+               t.category AS category, t.rank AS rank,
+               t.description AS description, t.source AS source
+        LIMIT 1
+        """
+        results = neo4j_conn.run_query(cypher_alias, {"names": names_list})
+        return results[0] if results else None
+
+    @staticmethod
+    def merge_official_title(title: OfficialTitle) -> str:
+        """智能合并官职节点（尊重种子数据权威性）
+
+        核心原则：
+        - 种子数据（source='seed'）的 name、category、rank、description、duties
+          拥有最高优先级，**不可被 LLM 提取覆盖**
+        - LLM 提取的官职只能：
+          ① 匹配到已有种子官职 → 追加别名（仅追加，不改其他）
+          ② 匹配到已有 LLM 官职 → 正常合并
+          ③ 完全新官职 → 创建新节点
+
+        流程：
+        1. 收集新官职的所有名字（name + aliases）
+        2. 在 Neo4j 中查找是否有匹配
+        3. 如果匹配到种子节点 → 只追加别名
+        4. 如果匹配到 LLM 节点 → 合并别名 + 更新信息
+        5. 如果没找到 → 创建新节点
+
+        Returns:
+            最终使用的 uid
+        """
+        all_names = title.all_names()
+        existing = GraphCRUD.find_title_by_any_name(all_names)
+
+        if existing:
+            existing_uid = existing["uid"]
+            existing_source = existing.get("source") or "llm"
+            existing_aliases = set(existing.get("aliases") or [])
+            existing_aliases.add(existing.get("name", ""))
+            final_name = existing.get("name")
+
+            if existing_source == "seed":
+                # ────── 种子数据：只追加别名，绝不改其他字段 ──────
+                new_aliases = existing_aliases | all_names
+                new_aliases.discard(final_name)
+                new_aliases.discard("")
+
+                added = new_aliases - existing_aliases
+                if added:
+                    update_cypher = """
+                    MATCH (t:OfficialTitle {uid: $uid})
+                    SET t.aliases = $aliases
+                    """
+                    neo4j_conn.run_write(update_cypher, {
+                        "uid": existing_uid,
+                        "aliases": sorted(new_aliases),
+                    })
+                    logger.debug(
+                        f"种子官职 [{final_name}] 追加别名: {added} "
+                        f"(核心字段受保护，不可修改)"
+                    )
+                else:
+                    logger.debug(
+                        f"种子官职 [{final_name}] 已存在，无新别名需追加"
+                    )
+                return existing_uid
+            else:
+                # ────── LLM 数据：正常合并 ──────
+                new_aliases = existing_aliases | all_names
+                new_aliases.discard(final_name)
+                new_aliases.discard("")
+
+                # 合并 description（取更长的）
+                existing_desc = existing.get("description") or ""
+                new_desc = title.description or ""
+                final_desc = new_desc if len(new_desc) > len(existing_desc) else existing_desc
+
+                update_cypher = """
+                MATCH (t:OfficialTitle {uid: $uid})
+                SET t.aliases = $aliases,
+                    t.description = $desc
+                """
+                params = {
+                    "uid": existing_uid,
+                    "aliases": sorted(new_aliases),
+                    "desc": final_desc,
+                }
+
+                # 补充缺失字段
+                if title.rank and not existing.get("rank"):
+                    update_cypher += ", t.rank = $rank"
+                    params["rank"] = title.rank
+                if title.category and title.category != "其他" and existing.get("category") in (None, "其他", ""):
+                    update_cypher += ", t.category = $category"
+                    params["category"] = title.category
+
+                neo4j_conn.run_write(update_cypher, params)
+                logger.debug(
+                    f"合并官职 [{title.name}] → 已有节点 [{final_name}] "
+                    f"(uid={existing_uid}), 新别名: {new_aliases - existing_aliases}"
+                )
+                return existing_uid
+        else:
+            # ────── 创建新节点 ──────
+            cypher = """
+            MERGE (t:OfficialTitle {uid: $uid})
+            SET t += $props
+            """
+            props = title.neo4j_properties()
+            uid = props.pop("uid")
+            neo4j_conn.run_write(cypher, {"uid": uid, "props": props})
+            logger.debug(
+                f"新建官职 [{title.name}] (uid={uid}, 类别={title.category}, "
+                f"来源={title.source}), 别名: {title.aliases}"
+            )
+            return uid
+
+    @staticmethod
+    def upsert_official_title(title: OfficialTitle):
+        """创建或更新官职节点（简单模式，仅按 uid 合并）"""
+        cypher = """
+        MERGE (t:OfficialTitle {uid: $uid})
+        SET t += $props
+        """
+        props = title.neo4j_properties()
+        uid = props.pop("uid")
+        neo4j_conn.run_write(cypher, {"uid": uid, "props": props})
+
+    @staticmethod
+    def seed_official_titles():
+        """将种子官职批量写入 Neo4j（幂等操作）
+
+        种子官职享有最高优先级：
+        - 如果节点不存在 → 创建
+        - 如果节点已存在但 source!='seed' → 升级为 seed 并覆盖核心字段
+        - 如果节点已存在且 source='seed' → 只补充缺失字段
+        同时创建官职层级关系 SUPERVISES（上级→下级）。
+        """
+        from data.seed.seed_titles import SEED_OFFICIAL_TITLES
+
+        logger.info(f"写入 {len(SEED_OFFICIAL_TITLES)} 个种子官职...")
+        for title in SEED_OFFICIAL_TITLES:
+            # 使用 MERGE + SET 确保种子数据始终覆盖
+            cypher = """
+            MERGE (t:OfficialTitle {uid: $uid})
+            SET t.name = $name,
+                t.aliases = $aliases,
+                t.category = $category,
+                t.description = $description,
+                t.source = 'seed'
+            """
+            params = {
+                "uid": title.uid,
+                "name": title.name,
+                "aliases": title.aliases,
+                "category": title.category,
+                "description": title.description,
+            }
+            if title.rank:
+                cypher += ", t.rank = $rank"
+                params["rank"] = title.rank
+            if title.duties:
+                cypher += ", t.duties = $duties"
+                params["duties"] = title.duties
+            if title.parent_title_uid:
+                cypher += ", t.parent_title_uid = $parent_uid"
+                params["parent_uid"] = title.parent_title_uid
+
+            neo4j_conn.run_write(cypher, params)
+
+        # 创建层级关系 SUPERVISES（上级 → 下级）
+        for title in SEED_OFFICIAL_TITLES:
+            if title.parent_title_uid:
+                rel_cypher = """
+                MATCH (parent:OfficialTitle {uid: $parent_uid})
+                MATCH (child:OfficialTitle {uid: $child_uid})
+                MERGE (parent)-[:SUPERVISES]->(child)
+                """
+                neo4j_conn.run_write(rel_cypher, {
+                    "parent_uid": title.parent_title_uid,
+                    "child_uid": title.uid,
+                })
+
+        logger.info(f"种子官职写入完成，共 {len(SEED_OFFICIAL_TITLES)} 个")
+
     # ━━━━━━━━━━━━━━━ 智能关系创建 ━━━━━━━━━━━━━━━
 
     @staticmethod
@@ -340,10 +702,10 @@ class GraphCRUD:
         target_uid = GraphCRUD.resolve_node_uid(relation.target)
 
         if not source_uid:
-            logger.warning(f"关系创建失败：找不到源人物 [{relation.source}]")
+            logger.debug(f"关系跳过：找不到源实体 [{relation.source}]（可能是藩镇/机构等非实体名称）")
             return False
         if not target_uid:
-            logger.warning(f"关系创建失败：找不到目标人物 [{relation.target}]")
+            logger.debug(f"关系跳过：找不到目标实体 [{relation.target}]（可能是藩镇/机构等非实体名称）")
             return False
 
         # 清洗关系类型（统一大写，去除空格）
@@ -506,12 +868,40 @@ class GraphCRUD:
         return neo4j_conn.run_query(cypher, {"query": query, "limit": limit})
 
     @staticmethod
+    def get_dynasty_by_name(name: str) -> list[dict]:
+        """通过名字或别名查找政权/势力"""
+        cypher = """
+        MATCH (d:Dynasty)
+        WHERE d.name = $name OR $name IN d.aliases
+        RETURN d.uid AS uid, d.name AS name, d.aliases AS aliases,
+               d.faction_type AS faction_type, d.founder AS founder,
+               d.capital AS capital, d.description AS description
+        """
+        return neo4j_conn.run_query(cypher, {"name": name})
+
+    @staticmethod
+    def get_all_dynasty_names() -> list[dict]:
+        """获取所有政权/势力的名字和别名（用于向 LLM 提供上下文）"""
+        cypher = """
+        MATCH (d:Dynasty)
+        RETURN d.name AS name, d.aliases AS aliases, d.faction_type AS faction_type
+        ORDER BY d.name
+        """
+        return neo4j_conn.run_query(cypher)
+
+    @staticmethod
     def get_graph_stats() -> dict:
         """获取图谱统计信息"""
         stats = {}
-        for label in ["Person", "Dynasty", "Event", "Place"]:
+        for label in ["Person", "Dynasty", "Event", "Place", "OfficialTitle"]:
             result = neo4j_conn.run_query(f"MATCH (n:{label}) RETURN count(n) AS cnt")
             stats[label] = result[0]["cnt"] if result else 0
+        # 按 faction_type 细分 Dynasty
+        faction_result = neo4j_conn.run_query(
+            "MATCH (d:Dynasty) RETURN d.faction_type AS ft, count(d) AS cnt ORDER BY ft"
+        )
+        if faction_result:
+            stats["Dynasty_detail"] = {r["ft"] or "未分类": r["cnt"] for r in faction_result}
         rel_result = neo4j_conn.run_query("MATCH ()-[r]->() RETURN count(r) AS cnt")
         stats["Relation"] = rel_result[0]["cnt"] if rel_result else 0
         return stats
@@ -564,6 +954,17 @@ class GraphCRUD:
         ORDER BY e.year
         """
         return neo4j_conn.run_query(cypher, {"uid": person_uid})
+
+    @staticmethod
+    def get_all_title_names() -> list[dict]:
+        """获取所有官职的名字和别名（用于向 LLM 提供上下文）"""
+        cypher = """
+        MATCH (t:OfficialTitle)
+        RETURN t.name AS name, t.aliases AS aliases, t.category AS category,
+               t.source AS source
+        ORDER BY t.source DESC, t.name
+        """
+        return neo4j_conn.run_query(cypher)
 
     # ━━━━━━━━━━━━━━━ 编辑操作：删除/更新 ━━━━━━━━━━━━━━━
 

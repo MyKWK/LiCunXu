@@ -4,175 +4,1648 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>五代历史知识图谱</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦏</text></svg>">
 <style>
-  :root { --bg: #0f172a; --card: #1e293b; --border: #334155; --blue: #3b82f6; --amber: #f59e0b; --red: #ef4444; --green: #22c55e; }
+  :root {
+    --bg: #050508;
+    --card: #0a0a12;
+    --border: #1a1a2e;
+    --cyan: #00f5ff;
+    --magenta: #ff00ff;
+    --purple: #9d00ff;
+    --blue: #0080ff;
+    --amber: #ffaa00;
+    --red: #ff3366;
+    --green: #00ff88;
+    --pink: #ff66aa;
+  }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: #e2e8f0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: #e2e8f0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
 
-  .header { background: var(--card); padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); flex-shrink: 0; }
-  .header h1 { font-size: 17px; color: #f8fafc; }
-  .header .sub { font-size: 11px; color: #94a3b8; margin-top: 2px; }
-  .stats-bar { display: flex; gap: 8px; flex-wrap: wrap; }
-  .stat-item { background: rgba(255,255,255,0.08); padding: 3px 10px; border-radius: 12px; font-size: 11px; color: #cbd5e1; }
-  .stat-item span { font-weight: 700; color: var(--amber); }
+  /* 赛博朋克背景 */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      linear-gradient(90deg, rgba(0,245,255,0.02) 1px, transparent 1px),
+      linear-gradient(rgba(0,245,255,0.02) 1px, transparent 1px),
+      radial-gradient(ellipse at 20% 20%, rgba(157,0,255,0.1) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(0,245,255,0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 50%, rgba(255,0,255,0.05) 0%, transparent 70%);
+    background-size: 40px 40px, 40px 40px, 100% 100%, 100% 100%, 100% 100%;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* 扫描线效果 */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.1) 2px,
+      rgba(0,0,0,0.1) 4px
+    );
+    pointer-events: none;
+    z-index: 1001;
+  }
+
+  /* 扫描线动画 */
+  @keyframes scan-line {
+    0% { transform: translateY(-100%); opacity: 0; }
+    10% { opacity: 0.3; }
+    90% { opacity: 0.3; }
+    100% { transform: translateY(100vh); opacity: 0; }
+  }
+
+  .scan-line {
+    position: fixed;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--cyan), var(--magenta), transparent);
+    box-shadow: 0 0 20px var(--cyan), 0 0 40px var(--magenta);
+    pointer-events: none;
+    z-index: 1000;
+    animation: scan-line 6s linear infinite;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(1.1); }
+  }
+
+.header {
+    background: linear-gradient(180deg, rgba(10,10,18,0.99) 0%, rgba(5,5,8,0.98) 100%);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    position: relative;
+    z-index: 10;
+  }
+  .header::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent 0%, var(--cyan) 20%, var(--magenta) 50%, var(--purple) 80%, transparent 100%);
+    box-shadow: 0 0 20px var(--cyan), 0 0 40px var(--magenta);
+  }
+  .header h1 {
+    font-size: 18px;
+    color: var(--cyan);
+    text-shadow: 0 0 10px var(--cyan), 0 0 20px var(--cyan), 0 0 40px rgba(0,245,255,0.5);
+    letter-spacing: 2px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .header .sub {
+    font-size: 11px;
+    color: #4a5568;
+    margin-top: 3px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .header-left {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .stats-bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .stat-item {
+    background: rgba(0,245,255,0.08);
+    border: 1px solid rgba(0,245,255,0.2);
+    padding: 4px 12px;
+    border-radius: 2px;
+    font-size: 11px;
+    color: #94a3b8;
+    letter-spacing: 1px;
+  }
+  .stat-item span {
+    font-weight: 700;
+    color: var(--cyan);
+    text-shadow: 0 0 8px var(--cyan);
+  }
+
+  /* ── 一级功能导航栏 ── */
+  .primary-nav {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    background: linear-gradient(180deg, rgba(10,10,18,0.98) 0%, rgba(5,5,8,0.96) 100%);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    position: relative;
+    z-index: 10;
+    padding: 0;
+  }
+  .primary-nav::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, rgba(0,245,255,0.3) 30%, rgba(255,0,255,0.2) 70%, transparent 100%);
+  }
+  .pnav-item {
+    flex: none;
+    padding: 10px 28px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #4a5568;
+    cursor: pointer;
+    transition: all 0.3s;
+    letter-spacing: 2px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 2px solid transparent;
+    user-select: none;
+  }
+  .pnav-item:hover {
+    color: #e2e8f0;
+    background: rgba(255,255,255,0.03);
+  }
+  .pnav-item.active {
+    color: var(--cyan);
+    border-bottom-color: var(--cyan);
+    text-shadow: 0 0 12px var(--cyan);
+    background: rgba(0,245,255,0.04);
+  }
+  .pnav-item .pnav-icon { font-size: 16px; }
+  .pnav-item .pnav-label { }
+  .pnav-divider {
+    width: 1px;
+    height: 24px;
+    background: var(--border);
+    flex-shrink: 0;
+  }
 
   .main { flex: 1; display: flex; overflow: hidden; }
 
-  .graph-panel { flex: 1; position: relative; display: flex; flex-direction: column; min-width: 0; }
-  .toolbar { padding: 8px 12px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; border-bottom: 1px solid var(--border); flex-shrink: 0; background: var(--card); }
-  .btn { padding: 5px 12px; border: none; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 500; transition: all 0.15s; white-space: nowrap; }
-  .btn-blue { background: var(--blue); color: white; }
-  .btn-blue:hover { background: #2563eb; }
-  .btn-ghost { background: rgba(255,255,255,0.08); color: #cbd5e1; border: 1px solid rgba(255,255,255,0.15); }
-  .btn-ghost:hover { background: rgba(255,255,255,0.15); }
-  .btn-amber { background: var(--amber); color: #0f172a; }
-  .btn-amber:hover { background: #d97706; }
-  .search-group { margin-left: auto; display: flex; gap: 5px; }
-  .search-group input { padding: 5px 10px; border: 1px solid #475569; border-radius: 5px; background: var(--bg); color: #e2e8f0; font-size: 12px; width: 160px; outline: none; }
-  .search-group input:focus { border-color: var(--blue); }
-  .search-group input::placeholder { color: #64748b; }
-  .graph-area { flex: 1; position: relative; }
-  #graph-container { position: absolute; inset: 0; }
-  .overlay-msg { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; z-index: 5; }
-  .overlay-msg.hidden { display: none; }
-  .overlay-msg .icon { font-size: 48px; margin-bottom: 10px; }
-  .overlay-msg .text { font-size: 15px; color: #64748b; }
-  .overlay-msg .hint { font-size: 12px; color: #475569; margin-top: 4px; }
-  .spinner-wrap { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 20; text-align: center; display: none; }
-  .spinner { width: 30px; height: 30px; border: 3px solid #334155; border-top-color: var(--blue); border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto 6px; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .err-toast { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); background: #7f1d1d; color: #fca5a5; padding: 8px 16px; border-radius: 6px; font-size: 12px; z-index: 100; display: none; max-width: 80%; text-align: center; }
+  /* 一级视图容器 */
+  .primary-view { display: none; flex: 1; overflow: hidden; min-height: 0; }
+  .primary-view.active { display: flex; }
 
-  /* Right Panel */
-  .right-panel { width: 400px; flex-shrink: 0; display: flex; flex-direction: column; background: var(--card); border-left: 1px solid var(--border); }
-  .panel-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; }
-  .panel-tab { flex: 1; padding: 9px; text-align: center; font-size: 13px; cursor: pointer; color: #94a3b8; border-bottom: 2px solid transparent; transition: all 0.15s; }
-  .panel-tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+  /* 实体浏览独立视图 */
+  .browse-view {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+  .browse-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(180deg, rgba(10,10,18,0.99) 0%, rgba(5,5,8,0.98) 100%);
+    min-width: 0;
+    min-height: 0;
+  }
+  .browse-main-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    background: rgba(0,0,0,0.3);
+  }
+  .browse-main-header h2 {
+    font-size: 16px;
+    color: var(--cyan);
+    text-shadow: 0 0 10px var(--cyan);
+    letter-spacing: 2px;
+    font-weight: 600;
+  }
+  .browse-main-body {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    min-height: 0;
+  }
+  .browse-left-tree {
+    width: 280px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border);
+    background: rgba(0,0,0,0.2);
+    overflow: hidden;
+    min-height: 0;
+  }
+  .browse-right-detail {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-width: 0;
+  }
+  .browse-right-detail .detail-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px;
+  }
+
+  /* 藩镇官职独立视图 */
+  .fanzhen-view {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    min-height: 0;
+  }
+  .fanzhen-view iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+
+.graph-panel { flex: 1; position: relative; display: flex; flex-direction: column; min-width: 0; }
+  .toolbar {
+    padding: 10px 14px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    background: linear-gradient(180deg, rgba(10,10,18,0.95) 0%, rgba(5,5,8,0.9) 100%);
+  }
+  .btn {
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+    background: transparent;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    transition: left 0.5s;
+  }
+  .btn:hover::before { left: 100%; }
+  .btn:hover {
+    border-color: var(--cyan);
+    color: var(--cyan);
+    box-shadow: 0 0 20px rgba(0,245,255,0.3), inset 0 0 20px rgba(0,245,255,0.1);
+    text-shadow: 0 0 10px var(--cyan);
+  }
+  .btn-blue {
+    border-color: var(--cyan);
+    color: var(--cyan);
+    text-shadow: 0 0 5px var(--cyan);
+    box-shadow: 0 0 15px rgba(0,245,255,0.2);
+  }
+  .btn-blue:hover {
+    background: rgba(0,245,255,0.1);
+    box-shadow: 0 0 30px rgba(0,245,255,0.5), inset 0 0 30px rgba(0,245,255,0.1);
+  }
+  .btn-ghost {
+    background: transparent;
+    color: #64748b;
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover {
+    border-color: var(--purple);
+    color: var(--purple);
+    box-shadow: 0 0 15px rgba(157,0,255,0.3);
+    text-shadow: 0 0 8px var(--purple);
+  }
+  .btn-amber {
+    border-color: var(--amber);
+    color: var(--amber);
+    text-shadow: 0 0 5px var(--amber);
+    box-shadow: 0 0 15px rgba(255,170,0,0.2);
+  }
+  .btn-amber:hover {
+    background: rgba(255,170,0,0.1);
+    box-shadow: 0 0 30px rgba(255,170,0,0.5), inset 0 0 30px rgba(255,170,0,0.1);
+  }
+  .search-group { margin-left: auto; display: flex; gap: 6px; }
+  .search-group input {
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    background: rgba(0,0,0,0.5);
+    color: #e2e8f0;
+    font-size: 12px;
+    width: 160px;
+    outline: none;
+    transition: all 0.3s;
+  }
+  .search-group input:focus {
+    border-color: var(--cyan);
+    box-shadow: 0 0 15px rgba(0,245,255,0.3);
+  }
+  .search-group input::placeholder { color: #4a5568; }
+.graph-area { flex: 1; position: relative; }
+  #graph-container { position: absolute; inset: 0; }
+  .overlay-msg {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    pointer-events: none;
+    z-index: 5;
+  }
+  .overlay-msg.hidden { display: none; }
+  .overlay-msg .icon {
+    width: 180px;
+    height: 180px;
+    margin: 0 auto 16px auto;
+    filter: drop-shadow(0 0 15px var(--cyan)) drop-shadow(0 0 30px rgba(0,245,255,0.3));
+    animation: holoPulse 3s ease-in-out infinite;
+  }
+  .overlay-msg .icon svg {
+    width: 100%;
+    height: 100%;
+  }
+  @keyframes holoPulse {
+    0%, 100% { filter: drop-shadow(0 0 12px var(--cyan)) drop-shadow(0 0 25px rgba(0,245,255,0.2)); opacity: 0.85; }
+    50% { filter: drop-shadow(0 0 20px var(--cyan)) drop-shadow(0 0 40px rgba(0,245,255,0.4)); opacity: 1; }
+  }
+  .overlay-msg .text { font-size: 16px; color: var(--cyan); text-shadow: 0 0 10px var(--cyan); letter-spacing: 2px; }
+  .overlay-msg .hint { font-size: 12px; color: #4a5568; margin-top: 6px; letter-spacing: 1px; }
+  .spinner-wrap {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 20;
+    text-align: center;
+    display: none;
+  }
+  .spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--border);
+    border-top-color: var(--cyan);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    margin: 0 auto 8px;
+    box-shadow: 0 0 20px rgba(0,245,255,0.3);
+  }
+  .err-toast {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, rgba(255,51,102,0.2) 0%, rgba(255,0,255,0.15) 100%);
+    border: 1px solid rgba(255,51,102,0.4);
+    color: #fca5a5;
+    padding: 10px 18px;
+    border-radius: 4px;
+    font-size: 12px;
+    z-index: 100;
+    display: none;
+    max-width: 80%;
+    text-align: center;
+    text-shadow: 0 0 5px var(--red);
+    box-shadow: 0 0 20px rgba(255,51,102,0.2);
+  }
+
+/* Right Panel */
+  .right-panel {
+    width: 400px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(180deg, rgba(10,10,18,0.99) 0%, rgba(5,5,8,0.98) 100%);
+    border-left: 1px solid var(--border);
+    overflow: hidden;
+    position: relative;
+  }
+  .right-panel::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(180deg, transparent 0%, var(--magenta) 30%, var(--cyan) 70%, transparent 100%);
+    box-shadow: 0 0 20px var(--magenta), 0 0 40px var(--cyan);
+  }
+  .panel-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    background: rgba(0,0,0,0.3);
+  }
+  .panel-tab {
+    flex: 1;
+    padding: 10px;
+    text-align: center;
+    font-size: 12px;
+    cursor: pointer;
+    color: #64748b;
+    border-bottom: 2px solid transparent;
+    transition: all 0.3s;
+    letter-spacing: 1px;
+    white-space: nowrap;
+  }
+  .panel-tab.active {
+    color: var(--magenta);
+    border-bottom-color: var(--magenta);
+    text-shadow: 0 0 10px var(--magenta);
+  }
   .panel-tab:hover { color: #e2e8f0; }
   .tab-body { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
   .tab-pane { display: none; flex-direction: column; flex: 1; overflow: hidden; }
   .tab-pane.active { display: flex; }
 
-  /* QA pane */
-  .qa-msgs { flex: 1; overflow-y: auto; padding: 10px; }
-  .msg { margin-bottom: 10px; }
-  .msg-q { background: #334155; padding: 8px 10px; border-radius: 8px 8px 2px 8px; font-size: 13px; }
-  .msg-a { background: #0f172a; padding: 8px 10px; border-radius: 8px 8px 8px 2px; font-size: 13px; line-height: 1.7; border-left: 3px solid var(--blue); margin-top: 5px; }
-  .msg-cypher { font-family: monospace; font-size: 11px; background: #0f172a; color: #22c55e; padding: 5px; border-radius: 4px; margin-top: 3px; white-space: pre-wrap; word-break: break-all; }
-  .msg-meta { font-size: 11px; color: #475569; margin-top: 2px; }
-  .presets { padding: 6px 10px; border-top: 1px solid var(--border); flex-shrink: 0; }
-  .presets h4 { font-size: 11px; color: #64748b; margin-bottom: 4px; }
-  .preset-btn { display: block; width: 100%; text-align: left; padding: 4px 8px; margin-bottom: 2px; font-size: 12px; background: #0f172a; border: 1px solid var(--border); border-radius: 4px; cursor: pointer; color: #94a3b8; transition: all 0.15s; }
-  .preset-btn:hover { border-color: var(--blue); color: #e2e8f0; }
-  .qa-input { padding: 10px; border-top: 1px solid var(--border); display: flex; gap: 6px; flex-shrink: 0; }
-  .qa-input input { flex: 1; padding: 8px 10px; border: 1px solid #475569; border-radius: 5px; background: #0f172a; color: #e2e8f0; font-size: 13px; outline: none; }
-  .qa-input input:focus { border-color: var(--blue); }
-  .qa-input input::placeholder { color: #475569; }
+/* QA pane - 聊天气泡样式 */
+  .qa-msgs { flex: 1; overflow-y: auto; padding: 16px 12px; }
+  .qa-msgs::-webkit-scrollbar { width: 3px; }
+  .qa-msgs::-webkit-scrollbar-track { background: var(--bg); }
+  .qa-msgs::-webkit-scrollbar-thumb { background: linear-gradient(180deg, var(--cyan), var(--magenta)); border-radius: 2px; }
+  .msg { margin-bottom: 16px; display: flex; flex-direction: column; }
+  .msg-row { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px; }
+  .msg-row.user { flex-direction: row-reverse; }
+  .msg-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .msg-avatar.user-avatar {
+    background: linear-gradient(135deg, rgba(157,0,255,0.4), rgba(255,0,255,0.3));
+    border: 1px solid rgba(157,0,255,0.5);
+  }
+  .msg-avatar.ai-avatar {
+    background: linear-gradient(135deg, rgba(0,245,255,0.2), rgba(0,128,255,0.2));
+    border: 1px solid rgba(0,245,255,0.4);
+  }
+  .msg-bubble { max-width: 85%; position: relative; }
+  .msg-q {
+    background: linear-gradient(135deg, rgba(157,0,255,0.2) 0%, rgba(255,0,255,0.12) 100%);
+    border: 1px solid rgba(157,0,255,0.35);
+    padding: 10px 14px;
+    border-radius: 16px 16px 4px 16px;
+    font-size: 13px;
+    color: #e2e8f0;
+    line-height: 1.6;
+    box-shadow: 0 2px 8px rgba(157,0,255,0.1);
+  }
+  .msg-a {
+    background: linear-gradient(135deg, rgba(0,245,255,0.06) 0%, rgba(0,128,255,0.04) 100%);
+    border: 1px solid rgba(0,245,255,0.2);
+    padding: 12px 14px;
+    border-radius: 16px 16px 16px 4px;
+    font-size: 13px;
+    line-height: 1.8;
+    color: #cbd5e1;
+    box-shadow: 0 2px 8px rgba(0,245,255,0.08);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+  .msg-meta {
+    font-size: 10px;
+    color: #4a5568;
+    margin-top: 4px;
+    padding-left: 40px;
+    letter-spacing: 1px;
+  }
+  .presets {
+    padding: 8px 12px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+    background: rgba(0,0,0,0.3);
+  }
+  .presets h4 { font-size: 10px; color: #64748b; margin-bottom: 6px; letter-spacing: 2px; text-transform: uppercase; }
+  .preset-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 6px 10px;
+    margin-bottom: 3px;
+    font-size: 12px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    cursor: pointer;
+    color: #94a3b8;
+    transition: all 0.3s;
+  }
+  .preset-btn:hover {
+    border-color: var(--purple);
+    color: var(--purple);
+    box-shadow: 0 0 15px rgba(157,0,255,0.2);
+    text-shadow: 0 0 8px var(--purple);
+  }
+  .qa-input {
+    padding: 10px 12px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+    background: rgba(0,0,0,0.3);
+  }
+  .qa-input input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    background: rgba(0,0,0,0.5);
+    color: #e2e8f0;
+    font-size: 13px;
+    outline: none;
+    transition: all 0.3s;
+  }
+  .qa-input input:focus {
+    border-color: var(--cyan);
+    box-shadow: 0 0 15px rgba(0,245,255,0.2);
+  }
+  .qa-input input::placeholder { color: #4a5568; }
 
-  /* Detail pane */
-  .detail-content { flex: 1; overflow-y: auto; padding: 12px; }
-  .detail-header { margin-bottom: 12px; }
-  .detail-header h3 { color: var(--amber); font-size: 16px; margin-bottom: 4px; }
-  .detail-header .badge { display: inline-block; background: rgba(59,130,246,0.2); color: var(--blue); padding: 2px 8px; border-radius: 10px; font-size: 11px; margin-right: 4px; }
-  .detail-row { font-size: 12px; margin: 4px 0; line-height: 1.6; color: #cbd5e1; }
+/* Detail pane */
+  .detail-content { flex: 1; overflow-y: auto; padding: 14px; }
+  .detail-content::-webkit-scrollbar { width: 3px; }
+  .detail-content::-webkit-scrollbar-track { background: var(--bg); }
+  .detail-content::-webkit-scrollbar-thumb { background: linear-gradient(180deg, var(--cyan), var(--magenta)); border-radius: 2px; }
+  .detail-header { margin-bottom: 14px; }
+  .detail-header h3 {
+    color: var(--amber);
+    font-size: 18px;
+    margin-bottom: 6px;
+    text-shadow: 0 0 10px var(--amber);
+    letter-spacing: 1px;
+  }
+  .detail-header .badge {
+    display: inline-block;
+    background: linear-gradient(135deg, rgba(0,128,255,0.2), rgba(0,245,255,0.15));
+    border: 1px solid rgba(0,245,255,0.4);
+    color: var(--cyan);
+    padding: 3px 10px;
+    border-radius: 2px;
+    font-size: 10px;
+    margin-right: 4px;
+    text-shadow: 0 0 5px var(--cyan);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .detail-row { font-size: 12px; margin: 5px 0; line-height: 1.6; color: #cbd5e1; }
   .detail-row .lbl { color: #64748b; font-weight: 500; }
-  .detail-section { margin-top: 14px; }
-  .detail-section h4 { font-size: 13px; color: #94a3b8; margin-bottom: 6px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
-  .ev-card { background: #0f172a; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; margin-bottom: 6px; cursor: pointer; transition: border-color 0.15s; }
-  .ev-card:hover { border-color: var(--blue); }
-  .ev-card h4 { font-size: 13px; color: var(--blue); margin-bottom: 2px; }
-  .ev-card .meta { font-size: 11px; color: #64748b; }
-  .ev-card .desc { font-size: 12px; color: #94a3b8; margin-top: 3px; line-height: 1.5; }
-  .snippet-card { background: #0f172a; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; margin-bottom: 6px; }
-  .snippet-card .book { font-size: 11px; color: var(--amber); margin-bottom: 3px; }
+  .detail-section { margin-top: 16px; }
+  .detail-section h4 {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 5px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  /* ── 纵向时间轴 ── */
+  .timeline { position: relative; padding: 16px 0 16px 0; }
+  .timeline-title {
+    text-align: center; font-size: 13px; color: var(--amber); letter-spacing: 2px;
+    margin-bottom: 14px; text-shadow: 0 0 8px var(--amber);
+  }
+  .timeline-title .tl-years { font-size: 11px; color: #64748b; font-weight: 400; margin-left: 6px; letter-spacing: 1px; }
+  .timeline-track { position: relative; padding-left: 54px; }
+  /* 中央竖线 */
+  .timeline-track::before {
+    content: ''; position: absolute; left: 38px; top: 0; bottom: 0; width: 2px;
+    background: linear-gradient(180deg, transparent, var(--cyan) 30px, var(--cyan) calc(100% - 30px), transparent);
+    opacity: 0.4;
+  }
+  .tl-item {
+    position: relative; margin-bottom: 20px; cursor: pointer; transition: all 0.3s;
+  }
+  /* 时间轴节点圆点 */
+  .tl-dot {
+    position: absolute; left: -22px; top: 6px; width: 10px; height: 10px;
+    border-radius: 50%; border: 2px solid var(--cyan);
+    background: var(--bg); z-index: 2; transition: all 0.3s;
+    box-shadow: 0 0 6px rgba(0,245,255,0.3);
+  }
+  .tl-item:hover .tl-dot {
+    background: var(--cyan); box-shadow: 0 0 12px var(--cyan), 0 0 24px rgba(0,245,255,0.4);
+    transform: scale(1.3);
+  }
+  /* 特殊节点样式 */
+  .tl-dot.dot-birth { border-color: var(--green); box-shadow: 0 0 6px rgba(0,255,136,0.3); }
+  .tl-item:hover .tl-dot.dot-birth { background: var(--green); box-shadow: 0 0 12px var(--green); }
+  .tl-dot.dot-death { border-color: var(--red); box-shadow: 0 0 6px rgba(255,51,102,0.3); }
+  .tl-item:hover .tl-dot.dot-death { background: var(--red); box-shadow: 0 0 12px var(--red); }
+  .tl-dot.dot-war { border-color: var(--red); }
+  .tl-dot.dot-coup { border-color: var(--magenta); }
+  .tl-dot.dot-throne { border-color: var(--amber); box-shadow: 0 0 6px rgba(255,170,0,0.3); }
+  .tl-dot.dot-betray { border-color: var(--pink); }
+  /* 年份标签 */
+  .tl-year {
+    position: absolute; left: -54px; top: 3px; width: 28px;
+    font-size: 11px; color: #64748b; text-align: right; font-variant-numeric: tabular-nums;
+    letter-spacing: 0; white-space: nowrap;
+  }
+  .tl-year.yr-life { color: var(--green); text-shadow: 0 0 5px rgba(0,255,136,0.3); }
+  .tl-year.yr-death { color: var(--red); text-shadow: 0 0 5px rgba(255,51,102,0.3); }
+  /* 事件卡片 */
+  .tl-card {
+    background: linear-gradient(135deg, rgba(0,245,255,0.04) 0%, rgba(157,0,255,0.03) 100%);
+    border: 1px solid var(--border); border-radius: 4px;
+    padding: 8px 10px; transition: all 0.3s; position: relative; overflow: hidden;
+  }
+  .tl-item:hover .tl-card {
+    border-color: var(--cyan); box-shadow: 0 0 16px rgba(0,245,255,0.12);
+    background: linear-gradient(135deg, rgba(0,245,255,0.08) 0%, rgba(157,0,255,0.05) 100%);
+  }
+  .tl-card .tl-name { font-size: 12px; color: var(--cyan); font-weight: 600; text-shadow: 0 0 5px var(--cyan); margin-bottom: 2px; }
+  .tl-card .tl-meta { font-size: 10px; color: #64748b; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .tl-card .tl-type {
+    background: rgba(0,245,255,0.1); border: 1px solid rgba(0,245,255,0.2);
+    padding: 1px 6px; border-radius: 2px; font-size: 9px; color: var(--cyan);
+  }
+  .tl-type.type-war { background: rgba(255,51,102,0.15); border-color: rgba(255,51,102,0.3); color: var(--red); }
+  .tl-type.type-coup { background: rgba(255,0,255,0.12); border-color: rgba(255,0,255,0.25); color: var(--magenta); }
+  .tl-type.type-throne { background: rgba(255,170,0,0.12); border-color: rgba(255,170,0,0.25); color: var(--amber); }
+  .tl-type.type-betray { background: rgba(255,102,170,0.12); border-color: rgba(255,102,170,0.25); color: var(--pink); }
+  .tl-type.type-alliance { background: rgba(0,255,136,0.1); border-color: rgba(0,255,136,0.2); color: var(--green); }
+  .tl-card .tl-desc { font-size: 11px; color: #94a3b8; margin-top: 4px; line-height: 1.5; }
+  /* 生卒特殊卡片 */
+  .tl-card.card-life {
+    border-color: rgba(0,255,136,0.25);
+    background: linear-gradient(135deg, rgba(0,255,136,0.06) 0%, rgba(0,255,136,0.02) 100%);
+  }
+  .tl-card.card-life .tl-name { color: var(--green); text-shadow: 0 0 5px var(--green); }
+  .tl-card.card-death {
+    border-color: rgba(255,51,102,0.25);
+    background: linear-gradient(135deg, rgba(255,51,102,0.06) 0%, rgba(255,51,102,0.02) 100%);
+  }
+  .tl-card.card-death .tl-name { color: var(--red); text-shadow: 0 0 5px var(--red); }
+  .tl-item.tl-life { cursor: default; }
+
+  /* ── 事件详情弹窗 ── */
+  .evt-modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75); z-index: 2000;
+    justify-content: center; align-items: center;
+    backdrop-filter: blur(6px);
+    opacity: 0; transition: opacity 0.3s ease;
+  }
+  .evt-modal-overlay.show { display: flex; opacity: 1; }
+  .evt-modal-overlay.fade-in { opacity: 1; }
+  .evt-modal {
+    background: linear-gradient(180deg, rgba(10,10,18,0.99) 0%, rgba(5,5,8,0.98) 100%);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 0; width: 560px; max-width: 92vw; max-height: 82vh;
+    overflow: hidden; position: relative;
+    transform: translateY(20px) scale(0.97); transition: transform 0.3s ease;
+    box-shadow: 0 0 40px rgba(0,245,255,0.1), 0 0 80px rgba(157,0,255,0.08);
+  }
+  .evt-modal-overlay.fade-in .evt-modal { transform: translateY(0) scale(1); }
+  .evt-modal-header {
+    padding: 18px 20px 14px; border-bottom: 1px solid var(--border);
+    background: linear-gradient(135deg, rgba(0,245,255,0.05) 0%, rgba(157,0,255,0.04) 100%);
+  }
+  .evt-modal-header h3 { font-size: 16px; color: var(--cyan); text-shadow: 0 0 10px var(--cyan); margin-bottom: 6px; }
+  .evt-modal-header .badge { display: inline-block; padding: 2px 10px; border-radius: 3px; font-size: 10px; margin-right: 6px; }
+  .evt-modal-close {
+    position: absolute; top: 14px; right: 16px; width: 28px; height: 28px;
+    border: 1px solid var(--border); border-radius: 4px; background: rgba(0,0,0,0.5);
+    color: #94a3b8; font-size: 14px; cursor: pointer; display: flex; align-items: center;
+    justify-content: center; transition: all 0.2s;
+  }
+  .evt-modal-close:hover { border-color: var(--red); color: var(--red); box-shadow: 0 0 10px rgba(255,51,102,0.3); }
+  .evt-modal-body { padding: 16px 20px; overflow-y: auto; max-height: calc(82vh - 90px); }
+  .evt-modal-body::-webkit-scrollbar { width: 3px; }
+  .evt-modal-body::-webkit-scrollbar-track { background: var(--bg); }
+  .evt-modal-body::-webkit-scrollbar-thumb { background: linear-gradient(180deg, var(--cyan), var(--magenta)); border-radius: 2px; }
+  .evt-modal-row { font-size: 12px; margin: 6px 0; line-height: 1.7; color: #cbd5e1; }
+  .evt-modal-row .lbl { color: #64748b; font-weight: 500; margin-right: 4px; }
+  .evt-modal-section { margin-top: 16px; }
+  .evt-modal-section h4 {
+    font-size: 11px; color: #94a3b8; margin-bottom: 8px;
+    border-bottom: 1px solid var(--border); padding-bottom: 5px; letter-spacing: 2px; text-transform: uppercase;
+  }
+  .evt-modal-participant {
+    display: inline-block; background: rgba(0,245,255,0.08); border: 1px solid rgba(0,245,255,0.2);
+    border-radius: 3px; padding: 3px 10px; margin: 3px 4px 3px 0; font-size: 11px;
+    color: #cbd5e1; cursor: pointer; transition: all 0.3s;
+  }
+  .evt-modal-participant:hover { background: rgba(0,245,255,0.18); border-color: var(--cyan); color: var(--cyan); }
+  .evt-modal-summary {
+    background: rgba(0,245,255,0.03); border: 1px solid var(--border); border-radius: 4px;
+    padding: 12px; font-size: 12px; color: #94a3b8; line-height: 1.7;
+  }
+  /* ev-card: 节点详情面板中的事件卡片 */
+  .ev-card {
+    background: linear-gradient(135deg, rgba(0,245,255,0.03) 0%, rgba(157,0,255,0.03) 100%);
+    border: 1px solid var(--border); border-radius: 4px;
+    padding: 10px 12px; margin-bottom: 8px; cursor: pointer;
+    transition: all 0.3s; position: relative; overflow: hidden;
+  }
+  .ev-card::before {
+    content: ''; position: absolute; top: 0; left: 0; width: 2px; height: 100%;
+    background: linear-gradient(180deg, var(--cyan), var(--magenta)); opacity: 0.5;
+  }
+  .ev-card:hover { border-color: var(--cyan); box-shadow: 0 0 20px rgba(0,245,255,0.15); }
+  .ev-card h4 { font-size: 13px; color: var(--cyan); margin-bottom: 3px; text-shadow: 0 0 5px var(--cyan); }
+  .ev-card .meta { font-size: 10px; color: #64748b; }
+  .ev-card .desc { font-size: 12px; color: #94a3b8; margin-top: 4px; line-height: 1.5; }
+  .snippet-card {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+  }
+  .snippet-card .book { font-size: 10px; color: var(--amber); margin-bottom: 4px; text-shadow: 0 0 5px var(--amber); letter-spacing: 1px; }
   .snippet-card .text { font-size: 12px; color: #94a3b8; line-height: 1.6; }
-  .snippet-card .text mark { background: rgba(251,191,36,0.3); color: var(--amber); padding: 0 2px; border-radius: 2px; }
-  .rel-tag { display: inline-block; background: rgba(255,255,255,0.08); border: 1px solid var(--border); border-radius: 4px; padding: 2px 8px; margin: 2px 4px 2px 0; font-size: 11px; color: #cbd5e1; cursor: pointer; transition: all 0.15s; }
-  .rel-tag:hover { background: rgba(59,130,246,0.2); border-color: var(--blue); }
+  .snippet-card .text mark {
+    background: rgba(255,170,0,0.3);
+    color: var(--amber);
+    padding: 0 2px;
+    border-radius: 2px;
+    text-shadow: 0 0 5px var(--amber);
+  }
+  .rel-tag {
+    display: inline-block;
+    background: rgba(0,245,255,0.08);
+    border: 1px solid rgba(0,245,255,0.2);
+    border-radius: 2px;
+    padding: 3px 10px;
+    margin: 3px 5px 3px 0;
+    font-size: 11px;
+    color: #cbd5e1;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+  .rel-tag:hover {
+    background: rgba(0,245,255,0.15);
+    border-color: var(--cyan);
+    box-shadow: 0 0 10px rgba(0,245,255,0.2);
+  }
   .rel-tag .rtype { color: #64748b; font-size: 10px; }
-  .participant-tag { display: inline-block; background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); border-radius: 4px; padding: 2px 8px; margin: 2px 4px 2px 0; font-size: 11px; color: #fca5a5; cursor: pointer; }
-  .participant-tag:hover { background: rgba(239,68,68,0.3); }
-  .empty { padding: 30px; text-align: center; color: #475569; font-size: 13px; }
+  .participant-tag {
+    display: inline-block;
+    background: rgba(255,51,102,0.15);
+    border: 1px solid rgba(255,51,102,0.3);
+    border-radius: 2px;
+    padding: 3px 10px;
+    margin: 3px 5px 3px 0;
+    font-size: 11px;
+    color: #fca5a5;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+  .participant-tag:hover {
+    background: rgba(255,51,102,0.3);
+    box-shadow: 0 0 10px rgba(255,51,102,0.2);
+  }
+  .empty { padding: 40px; text-align: center; color: #374151; font-size: 12px; letter-spacing: 2px; }
   .ispin { display: inline-block; width: 14px; height: 14px; border: 2px solid #475569; border-top-color: var(--blue); border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; }
 
-  /* Summary markdown styles */
-  .summary-box { background: #0f172a; border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; margin: 10px 0; line-height: 1.8; font-size: 13px; color: #cbd5e1; }
-  .summary-box h1, .summary-box h2, .summary-box h3, .summary-box h4 { color: var(--amber); margin: 8px 0 4px; }
+/* Summary markdown styles */
+  .summary-box {
+    background: linear-gradient(135deg, rgba(0,245,255,0.03) 0%, rgba(157,0,255,0.03) 100%);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px 16px;
+    margin: 12px 0;
+    line-height: 1.8;
+    font-size: 13px;
+    color: #cbd5e1;
+    position: relative;
+    overflow: hidden;
+  }
+  .summary-box::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--cyan), var(--magenta), var(--purple));
+    box-shadow: 0 0 10px var(--cyan);
+  }
+  .summary-box h1, .summary-box h2, .summary-box h3, .summary-box h4 { color: var(--amber); margin: 10px 0 6px; text-shadow: 0 0 8px var(--amber); }
   .summary-box h1 { font-size: 16px; } .summary-box h2 { font-size: 15px; } .summary-box h3 { font-size: 14px; } .summary-box h4 { font-size: 13px; }
   .summary-box strong { color: #f8fafc; font-weight: 700; }
   .summary-box em { color: #94a3b8; }
-  .summary-box ul, .summary-box ol { padding-left: 20px; margin: 4px 0; }
-  .summary-box li { margin: 2px 0; }
-  .summary-box p { margin: 4px 0; }
-  .summary-box blockquote { border-left: 3px solid var(--blue); padding-left: 10px; color: #94a3b8; margin: 6px 0; }
-  .summary-loading { text-align: center; padding: 16px; color: #64748b; font-size: 12px; }
-  .summary-label { font-size: 13px; color: var(--blue); font-weight: 600; margin-top: 12px; margin-bottom: 4px; }
+  .summary-box ul, .summary-box ol { padding-left: 20px; margin: 6px 0; }
+  .summary-box li { margin: 3px 0; }
+  .summary-box p { margin: 6px 0; }
+  .summary-box blockquote {
+    border-left: 3px solid var(--cyan);
+    padding-left: 12px;
+    color: #94a3b8;
+    margin: 8px 0;
+    background: rgba(0,245,255,0.03);
+  }
+  .summary-loading { text-align: center; padding: 20px; color: #64748b; font-size: 12px; letter-spacing: 2px; }
+  .summary-label {
+    font-size: 12px;
+    color: var(--cyan);
+    font-weight: 600;
+    margin-top: 14px;
+    margin-bottom: 6px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    text-shadow: 0 0 8px var(--cyan);
+  }
 
   /* Events pane */
-  .events-list { flex: 1; overflow-y: auto; padding: 10px; }
+  .events-list { flex: 1; overflow-y: auto; padding: 12px; }
+  .events-list::-webkit-scrollbar { width: 3px; }
+  .events-list::-webkit-scrollbar-track { background: var(--bg); }
+  .events-list::-webkit-scrollbar-thumb { background: linear-gradient(180deg, var(--cyan), var(--magenta)); border-radius: 2px; }
+
+  /* Browse pane - 实体浏览树形列表 */
+  .browse-pane { flex: 1; overflow-y: auto; padding: 0; min-height: 0; }
+  .browse-pane::-webkit-scrollbar { width: 3px; }
+  .browse-pane::-webkit-scrollbar-track { background: var(--bg); }
+  .browse-pane::-webkit-scrollbar-thumb { background: linear-gradient(180deg, var(--cyan), var(--magenta)); border-radius: 2px; }
+
+  .browse-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    background: rgba(0,0,0,0.3);
+    font-size: 11px;
+    color: #64748b;
+    flex-wrap: wrap;
+  }
+  .browse-crumb {
+    color: var(--cyan);
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: 2px 4px;
+    border-radius: 2px;
+  }
+  .browse-crumb:hover { background: rgba(0,245,255,0.1); text-shadow: 0 0 8px var(--cyan); }
+  .browse-crumb.current { color: #e2e8f0; cursor: default; }
+  .browse-crumb.current:hover { background: transparent; text-shadow: none; }
+  .browse-sep { color: #374151; font-size: 10px; }
+
+  .browse-list { flex: 1; overflow-y: auto; padding: 4px 0; min-height: 0; }
+
+  .browse-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-bottom: 1px solid rgba(255,255,255,0.02);
+    position: relative;
+  }
+  .browse-item:hover {
+    background: linear-gradient(90deg, rgba(0,245,255,0.06) 0%, transparent 100%);
+  }
+  .browse-item:active {
+    background: rgba(0,245,255,0.1);
+  }
+  .browse-item .bi-icon {
+    font-size: 16px;
+    flex-shrink: 0;
+    width: 24px;
+    text-align: center;
+  }
+  .browse-item .bi-body { flex: 1; min-width: 0; }
+  .browse-item .bi-name {
+    font-size: 13px;
+    color: #e2e8f0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .browse-item .bi-sub {
+    font-size: 10px;
+    color: #4a5568;
+    margin-top: 1px;
+  }
+  .browse-item .bi-count {
+    font-size: 10px;
+    color: #4a5568;
+    flex-shrink: 0;
+    background: rgba(255,255,255,0.04);
+    padding: 2px 8px;
+    border-radius: 10px;
+  }
+  .browse-item .bi-arrow {
+    color: #374151;
+    font-size: 12px;
+    flex-shrink: 0;
+    transition: color 0.2s, transform 0.2s;
+  }
+  .browse-item:hover .bi-arrow { color: var(--cyan); }
+  .browse-item:hover .bi-name { color: var(--cyan); }
+
+  .browse-item.entity-leaf .bi-name { color: #cbd5e1; }
+  .browse-item.entity-leaf:hover .bi-name { color: var(--amber); }
+  .browse-item.entity-leaf .bi-arrow { display: none; }
+
+  /* 树形展开：一级目录激活态 */
+  .browse-item.cat-active {
+    background: linear-gradient(90deg, rgba(0,245,255,0.08) 0%, transparent 100%);
+    border-left: 2px solid var(--cyan);
+  }
+  .browse-item.cat-active .bi-name { color: var(--cyan); text-shadow: 0 0 8px rgba(0,245,255,0.3); }
+  .browse-item.cat-active .bi-arrow { color: var(--cyan); transform: rotate(90deg); }
+
+  /* 树形展开：二级子容器 */
+  .browse-sub-container {
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.3s ease;
+    background: rgba(0,0,0,0.15);
+    border-left: 2px solid rgba(0,245,255,0.15);
+    margin-left: 12px;
+  }
+  .browse-sub-container.expanded {
+    max-height: 6000px;
+  }
+  .browse-sub-container .browse-item {
+    padding: 7px 12px 7px 10px;
+  }
+  .browse-sub-container .browse-item .bi-icon { font-size: 14px; width: 20px; }
+  .browse-sub-container .browse-item .bi-name { font-size: 12px; }
+  .browse-sub-container .browse-item .bi-count { font-size: 9px; padding: 1px 6px; }
+
+  /* 三级子容器（实体列表） */
+  .browse-sub-container .browse-sub-container {
+    margin-left: 8px;
+    border-left-color: rgba(0,245,255,0.08);
+  }
+  .browse-sub-container .browse-sub-container .browse-item {
+    padding: 6px 10px 6px 8px;
+  }
+  .browse-sub-container .browse-sub-container .browse-item .bi-name { font-size: 11px; }
+
+  /* 二级目录激活态 */
+  .browse-item.sub-active {
+    background: linear-gradient(90deg, rgba(0,245,255,0.05) 0%, transparent 100%);
+    border-left: 2px solid rgba(0,245,255,0.4);
+  }
+  .browse-item.sub-active .bi-name { color: var(--cyan); }
+  .browse-item.sub-active .bi-arrow { color: var(--cyan); transform: rotate(90deg); }
+
+  /* 搜索框在子容器内 */
+  .browse-sub-search {
+    padding: 6px 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .browse-sub-search input {
+    width: 100%;
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    background: rgba(0,0,0,0.4);
+    color: #e2e8f0;
+    font-size: 11px;
+    outline: none;
+    transition: border-color 0.3s;
+  }
+  .browse-sub-search input:focus {
+    border-color: var(--cyan);
+    box-shadow: 0 0 6px rgba(0,245,255,0.15);
+  }
+  .browse-sub-search input::placeholder { color: #4a5568; }
+
+  .browse-search {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    background: rgba(0,0,0,0.2);
+  }
+  .browse-search input {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    background: rgba(0,0,0,0.4);
+    color: #e2e8f0;
+    font-size: 12px;
+    outline: none;
+    transition: all 0.3s;
+  }
+  .browse-search input:focus {
+    border-color: var(--cyan);
+    box-shadow: 0 0 10px rgba(0,245,255,0.2);
+  }
+  .browse-search input::placeholder { color: #4a5568; }
 
   /* Edit buttons */
-  .edit-btn { background: rgba(59,130,246,0.2); color: var(--blue); border: 1px solid var(--blue); padding: 3px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; margin-left: 6px; transition: all 0.15s; }
-  .edit-btn:hover { background: var(--blue); color: white; }
-  .edit-btn-red { background: rgba(239,68,68,0.2); color: var(--red); border-color: var(--red); }
-  .edit-btn-red:hover { background: var(--red); color: white; }
-  .edit-btn-green { background: rgba(34,197,94,0.2); color: var(--green); border-color: var(--green); }
-  .edit-btn-green:hover { background: var(--green); color: white; }
+  .edit-btn {
+    background: rgba(0,128,255,0.15);
+    color: var(--blue);
+    border: 1px solid rgba(0,128,255,0.4);
+    padding: 4px 12px;
+    border-radius: 2px;
+    font-size: 10px;
+    cursor: pointer;
+    margin-left: 8px;
+    transition: all 0.3s;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .edit-btn:hover {
+    background: rgba(0,128,255,0.3);
+    box-shadow: 0 0 15px rgba(0,128,255,0.3);
+    text-shadow: 0 0 5px var(--blue);
+  }
+  .edit-btn-red {
+    background: rgba(255,51,102,0.15);
+    color: var(--red);
+    border-color: rgba(255,51,102,0.4);
+  }
+  .edit-btn-red:hover {
+    background: rgba(255,51,102,0.3);
+    box-shadow: 0 0 15px rgba(255,51,102,0.3);
+    text-shadow: 0 0 5px var(--red);
+  }
+  .edit-btn-green {
+    background: rgba(0,255,136,0.15);
+    color: var(--green);
+    border-color: rgba(0,255,136,0.4);
+  }
+  .edit-btn-green:hover {
+    background: rgba(0,255,136,0.3);
+    box-shadow: 0 0 15px rgba(0,255,136,0.3);
+    text-shadow: 0 0 5px var(--green);
+  }
 
-  /* Modal */
-  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; }
+/* Modal */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(4px);
+  }
   .modal-overlay.show { display: flex; }
-  .modal { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; width: 480px; max-width: 90vw; max-height: 80vh; overflow-y: auto; }
-  .modal h3 { color: var(--amber); font-size: 16px; margin-bottom: 14px; }
-  .modal-row { margin-bottom: 10px; }
-  .modal-row label { display: block; font-size: 12px; color: #94a3b8; margin-bottom: 4px; }
-  .modal-row input, .modal-row select, .modal-row textarea { width: 100%; padding: 7px 10px; border: 1px solid #475569; border-radius: 5px; background: var(--bg); color: #e2e8f0; font-size: 13px; outline: none; font-family: inherit; }
-  .modal-row input:focus, .modal-row select:focus, .modal-row textarea:focus { border-color: var(--blue); }
+  .modal {
+    background: linear-gradient(180deg, rgba(10,10,18,0.99) 0%, rgba(5,5,8,0.98) 100%);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 22px;
+    width: 480px;
+    max-width: 90vw;
+    max-height: 80vh;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 0 40px rgba(0,245,255,0.2), 0 0 80px rgba(157,0,255,0.1);
+  }
+  .modal::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--cyan), var(--magenta), var(--purple));
+    box-shadow: 0 0 10px var(--cyan);
+  }
+  .modal h3 {
+    color: var(--amber);
+    font-size: 16px;
+    margin-bottom: 16px;
+    text-shadow: 0 0 10px var(--amber);
+    letter-spacing: 1px;
+  }
+  .modal-row { margin-bottom: 12px; }
+  .modal-row label { display: block; font-size: 11px; color: #64748b; margin-bottom: 5px; letter-spacing: 1px; text-transform: uppercase; }
+  .modal-row input, .modal-row select, .modal-row textarea {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    background: rgba(0,0,0,0.5);
+    color: #e2e8f0;
+    font-size: 13px;
+    outline: none;
+    font-family: inherit;
+    transition: all 0.3s;
+  }
+  .modal-row input:focus, .modal-row select:focus, .modal-row textarea:focus {
+    border-color: var(--cyan);
+    box-shadow: 0 0 15px rgba(0,245,255,0.2);
+  }
   .modal-row textarea { min-height: 60px; resize: vertical; }
-  .modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
-  .modal-footer .btn { padding: 6px 16px; }
-  .alias-item { display: inline-flex; align-items: center; background: rgba(255,255,255,0.08); border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px 2px 8px; margin: 2px 4px 2px 0; font-size: 12px; }
-  .alias-item .alias-del { margin-left: 4px; cursor: pointer; color: var(--red); font-weight: bold; font-size: 14px; line-height: 1; }
-  .alias-item .alias-del:hover { color: #fca5a5; }
-  .alias-add-row { display: flex; gap: 4px; margin-top: 6px; }
-  .alias-add-row input { flex: 1; padding: 4px 8px; font-size: 12px; }
+  .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
+  .modal-footer .btn { padding: 8px 20px; }
+  .alias-item {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(0,245,255,0.08);
+    border: 1px solid rgba(0,245,255,0.2);
+    border-radius: 2px;
+    padding: 3px 8px 3px 10px;
+    margin: 3px 5px 3px 0;
+    font-size: 12px;
+    color: #cbd5e1;
+  }
+  .alias-item .alias-del {
+    margin-left: 6px;
+    cursor: pointer;
+    color: var(--red);
+    font-weight: bold;
+    font-size: 14px;
+    line-height: 1;
+    transition: all 0.3s;
+  }
+  .alias-item .alias-del:hover { color: #fca5a5; text-shadow: 0 0 8px var(--red); }
+  .alias-add-row { display: flex; gap: 6px; margin-top: 8px; }
+  .alias-add-row input { flex: 1; padding: 6px 10px; font-size: 12px; }
 
   /* Confirm dialog */
-  .confirm-msg { font-size: 14px; color: #e2e8f0; line-height: 1.6; margin-bottom: 16px; }
-  .confirm-msg strong { color: var(--amber); }
+  .confirm-msg { font-size: 14px; color: #e2e8f0; line-height: 1.6; margin-bottom: 18px; }
+  .confirm-msg strong { color: var(--amber); text-shadow: 0 0 8px var(--amber); }
 
   /* Relation edit row */
-  .rel-edit-row { display: flex; align-items: center; gap: 4px; margin: 3px 0; font-size: 12px; padding: 4px 6px; border-radius: 4px; background: rgba(255,255,255,0.03); }
-  .rel-edit-row:hover { background: rgba(255,255,255,0.06); }
-  .rel-edit-name { color: #cbd5e1; cursor: pointer; min-width: 60px; }
-  .rel-edit-name:hover { color: var(--blue); }
+  .rel-edit-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 4px 0;
+    font-size: 12px;
+    padding: 6px 8px;
+    border-radius: 3px;
+    background: rgba(255,255,255,0.02);
+    transition: all 0.3s;
+  }
+  .rel-edit-row:hover { background: rgba(255,255,255,0.05); }
+  .rel-edit-name { color: #cbd5e1; cursor: pointer; min-width: 70px; transition: all 0.3s; }
+  .rel-edit-name:hover { color: var(--cyan); text-shadow: 0 0 8px var(--cyan); }
   .rel-edit-type { color: #64748b; font-size: 11px; flex: 1; }
-  .rel-edit-actions { display: flex; gap: 4px; }
-  .rel-mini-btn { background: none; border: 1px solid var(--border); color: #94a3b8; padding: 1px 6px; border-radius: 3px; font-size: 10px; cursor: pointer; }
-  .rel-mini-btn:hover { border-color: var(--blue); color: var(--blue); }
-  .rel-mini-btn.del:hover { border-color: var(--red); color: var(--red); }
+  .rel-edit-actions { display: flex; gap: 5px; }
+  .rel-mini-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: #64748b;
+    padding: 2px 8px;
+    border-radius: 2px;
+    font-size: 10px;
+    cursor: pointer;
+    transition: all 0.3s;
+    letter-spacing: 1px;
+  }
+  .rel-mini-btn:hover {
+    border-color: var(--cyan);
+    color: var(--cyan);
+    box-shadow: 0 0 10px rgba(0,245,255,0.2);
+  }
+  .rel-mini-btn.del:hover {
+    border-color: var(--red);
+    color: var(--red);
+    box-shadow: 0 0 10px rgba(255,51,102,0.2);
+  }
 
-  /* 藩镇官职系统覆盖层 */
-  .fanzhen-overlay { display: none; position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,0.7); }
+/* 藩镇官职系统覆盖层 */
+  .fanzhen-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(4px);
+  }
   .fanzhen-overlay.show { display: flex; flex-direction: column; }
-  .fanzhen-bar { height: 40px; background: var(--card); display: flex; align-items: center; justify-content: space-between; padding: 0 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
-  .fanzhen-bar h3 { font-size: 14px; color: #ffd700; }
-  .fanzhen-bar .fz-close { background: none; border: 1px solid #475569; color: #94a3b8; padding: 3px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; }
-  .fanzhen-bar .fz-close:hover { border-color: var(--red); color: var(--red); }
+  .fanzhen-bar {
+    height: 44px;
+    background: linear-gradient(180deg, rgba(10,10,18,0.99) 0%, rgba(5,5,8,0.98) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 18px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    position: relative;
+  }
+  .fanzhen-bar::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--amber), var(--cyan), var(--magenta));
+    box-shadow: 0 0 20px var(--amber), 0 0 40px var(--cyan);
+  }
+  .fanzhen-bar h3 {
+    font-size: 14px;
+    color: var(--amber);
+    text-shadow: 0 0 10px var(--amber);
+    letter-spacing: 2px;
+  }
+  .fanzhen-bar .fz-close {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: #64748b;
+    padding: 4px 14px;
+    border-radius: 2px;
+    cursor: pointer;
+    font-size: 11px;
+    transition: all 0.3s;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .fanzhen-bar .fz-close:hover {
+    border-color: var(--red);
+    color: var(--red);
+    box-shadow: 0 0 15px rgba(255,51,102,0.3);
+    text-shadow: 0 0 8px var(--red);
+  }
   .fanzhen-frame { flex: 1; border: none; width: 100%; }
+
+  /* ── 知识攫取仪表盘 ── */
+  .ingestion-dashboard {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 24px;
+    background: linear-gradient(180deg, rgba(10,10,18,0.99) 0%, rgba(5,5,8,0.98) 100%);
+  }
+  .ingestion-dashboard::-webkit-scrollbar { width: 6px; }
+  .ingestion-dashboard::-webkit-scrollbar-track { background: transparent; }
+  .ingestion-dashboard::-webkit-scrollbar-thumb { background: linear-gradient(180deg, var(--cyan), var(--magenta)); border-radius: 3px; }
+  .ing-overview {
+    display: grid;
+    grid-template-columns: 240px 1fr 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .ing-detail-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+  }
+  .ing-card {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .ing-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--cyan), var(--magenta));
+    opacity: 0.6;
+  }
+  .ing-card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--cyan);
+    text-shadow: 0 0 8px var(--cyan);
+    margin-bottom: 14px;
+    letter-spacing: 1px;
+  }
+  /* 进度环 */
+  .ing-progress-ring-wrap {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 12px;
+  }
+  .ing-progress-ring { width: 120px; height: 120px; transform: rotate(-90deg); }
+  .ing-ring-bg {
+    fill: none;
+    stroke: rgba(255,255,255,0.05);
+    stroke-width: 8;
+  }
+  .ing-ring-fg {
+    fill: none;
+    stroke: var(--cyan);
+    stroke-width: 8;
+    stroke-linecap: round;
+    stroke-dasharray: 326.73;
+    stroke-dashoffset: 326.73;
+    transition: stroke-dashoffset 1s ease;
+    filter: drop-shadow(0 0 6px var(--cyan));
+  }
+  .ing-ring-text {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+  }
+  .ing-ring-pct {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--cyan);
+    text-shadow: 0 0 12px var(--cyan);
+  }
+  .ing-ring-sub {
+    font-size: 11px;
+    color: #64748b;
+    margin-top: 2px;
+  }
+  .ing-progress-detail {
+    font-size: 11px;
+    color: #94a3b8;
+    text-align: center;
+    line-height: 1.8;
+  }
+  /* 实体卡片网格 */
+  .ing-entity-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  .ing-entity-item {
+    background: rgba(0,245,255,0.04);
+    border: 1px solid rgba(0,245,255,0.12);
+    border-radius: 4px;
+    padding: 10px 8px;
+    text-align: center;
+    transition: all 0.3s;
+  }
+  .ing-entity-item:hover {
+    border-color: var(--cyan);
+    box-shadow: 0 0 12px rgba(0,245,255,0.15);
+  }
+  .ing-entity-icon { font-size: 20px; margin-bottom: 4px; }
+  .ing-entity-count {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--cyan);
+    text-shadow: 0 0 8px var(--cyan);
+  }
+  .ing-entity-label {
+    font-size: 11px;
+    color: #64748b;
+    margin-top: 2px;
+  }
+  /* 条形图 */
+  .ing-bar-chart { display: flex; flex-direction: column; gap: 6px; }
+  .ing-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+  }
+  .ing-bar-label {
+    width: 60px;
+    color: #94a3b8;
+    text-align: right;
+    flex-shrink: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ing-bar-track {
+    flex: 1;
+    height: 14px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+  }
+  .ing-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.8s ease;
+    min-width: 2px;
+  }
+  .ing-bar-fill.role-bar { background: linear-gradient(90deg, #ff3366, #ff66aa); box-shadow: 0 0 8px rgba(255,51,102,0.4); }
+  .ing-bar-fill.event-bar { background: linear-gradient(90deg, #00f5ff, #0080ff); box-shadow: 0 0 8px rgba(0,245,255,0.4); }
+  .ing-bar-fill.rel-bar { background: linear-gradient(90deg, #ffaa00, #ff8800); box-shadow: 0 0 8px rgba(255,170,0,0.4); }
+  .ing-bar-count {
+    width: 40px;
+    color: #64748b;
+    text-align: right;
+    flex-shrink: 0;
+  }
+  /* 章节进度 */
+  .ing-chapters-list {
+    max-height: 400px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .ing-chapters-list::-webkit-scrollbar { width: 4px; }
+  .ing-chapters-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .ing-ch-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    transition: background 0.2s;
+  }
+  .ing-ch-row:hover { background: rgba(255,255,255,0.03); }
+  .ing-ch-name {
+    width: 90px;
+    color: #94a3b8;
+    flex-shrink: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ing-ch-bar {
+    flex: 1;
+    height: 10px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .ing-ch-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.6s ease;
+  }
+  .ing-ch-fill.done { background: linear-gradient(90deg, #00ff88, #00cc66); box-shadow: 0 0 6px rgba(0,255,136,0.3); }
+  .ing-ch-fill.partial { background: linear-gradient(90deg, #ffaa00, #ff8800); box-shadow: 0 0 6px rgba(255,170,0,0.3); }
+  .ing-ch-fill.empty { background: rgba(255,255,255,0.05); }
+  .ing-ch-pct {
+    width: 42px;
+    text-align: right;
+    color: #64748b;
+    flex-shrink: 0;
+  }
+  .ing-ch-count {
+    width: 60px;
+    text-align: right;
+    color: #4a5568;
+    flex-shrink: 0;
+  }
+  /* 关系 TOP */
+  .ing-rel-list {
+    max-height: 400px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .ing-rel-list::-webkit-scrollbar { width: 4px; }
+  .ing-rel-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  /* 最近处理 */
+  .ing-recent-list {
+    max-height: 400px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .ing-recent-list::-webkit-scrollbar { width: 4px; }
+  .ing-recent-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .ing-recent-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    transition: background 0.2s;
+  }
+  .ing-recent-item:hover { background: rgba(255,255,255,0.03); }
+  .ing-recent-id { color: var(--cyan); font-family: monospace; flex-shrink: 0; }
+  .ing-recent-ch { color: #94a3b8; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ing-recent-chars { color: #4a5568; flex-shrink: 0; }
+  .ing-loading {
+    color: #94a3b8;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 20px;
+    justify-content: center;
+  }
+  /* 自动刷新指示 */
+  .ing-refresh-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .ing-refresh-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--cyan);
+    text-shadow: 0 0 10px var(--cyan);
+    letter-spacing: 2px;
+  }
+  .ing-refresh-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 11px;
+    color: #4a5568;
+  }
+  .ing-refresh-btn {
+    background: rgba(0,245,255,0.08);
+    border: 1px solid rgba(0,245,255,0.25);
+    color: var(--cyan);
+    padding: 4px 12px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 11px;
+    transition: all 0.3s;
+    letter-spacing: 1px;
+  }
+  .ing-refresh-btn:hover {
+    background: rgba(0,245,255,0.15);
+    box-shadow: 0 0 12px rgba(0,245,255,0.3);
+  }
+  @media (max-width: 1200px) {
+    .ing-overview { grid-template-columns: 1fr 1fr; }
+    .ing-detail-row { grid-template-columns: 1fr; }
+  }
+
+  .ispin {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--border);
+    border-top-color: var(--cyan);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
 
+<div class="scan-line"></div>
+
 <div class="header">
-  <div>
+  <div class="header-left">
     <h1>五代历史知识图谱与智能问答系统</h1>
     <div class="sub">907-960 | 后梁 · 后唐 · 后晋 · 后汉 · 后周</div>
   </div>
   <div class="stats-bar" id="stats-bar"></div>
 </div>
 
+<!-- 一级功能导航 -->
+<div class="primary-nav" id="primary-nav">
+  <div class="pnav-item active" data-view="graph" onclick="switchPrimaryView('graph')">
+    <span class="pnav-icon">🕸️</span>
+    <span class="pnav-label">知识图谱</span>
+  </div>
+  <div class="pnav-divider"></div>
+  <div class="pnav-item" data-view="browse" onclick="switchPrimaryView('browse')">
+    <span class="pnav-icon">📂</span>
+    <span class="pnav-label">实体浏览</span>
+  </div>
+  <div class="pnav-divider"></div>
+  <div class="pnav-item" data-view="fanzhen" onclick="switchPrimaryView('fanzhen')">
+    <span class="pnav-icon">🏯</span>
+    <span class="pnav-label">藩镇官职</span>
+  </div>
+  <div class="pnav-divider"></div>
+  <div class="pnav-item" data-view="ingestion" onclick="switchPrimaryView('ingestion')">
+    <span class="pnav-icon">⛏️</span>
+    <span class="pnav-label">知识攫取</span>
+  </div>
+</div>
+
 <div class="main">
+  <!-- ====== 视图1: 知识图谱 ====== -->
+  <div class="primary-view active" id="view-graph">
   <div class="graph-panel">
     <div class="toolbar">
       <button class="btn btn-blue" onclick="loadFull()">加载全图</button>
@@ -183,7 +1656,6 @@
       <button class="btn btn-ghost" onclick="searchAndShow('石敬瑭')">石敬瑭</button>
       <button class="btn btn-ghost" onclick="searchAndShow('郭威')">郭威</button>
       <button class="btn btn-ghost" onclick="searchAndShow('赵匡胤')">赵匡胤</button>
-      <button class="btn btn-amber" onclick="openFanzhen()">🏯 藩镇官职</button>
       <div class="search-group">
         <input id="search-input" placeholder="搜索人物..." onkeydown="if(event.key==='Enter')doSearch()">
         <button class="btn btn-blue" onclick="doSearch()">搜索</button>
@@ -191,7 +1663,74 @@
     </div>
     <div class="graph-area">
       <div class="overlay-msg" id="overlay">
-        <div class="icon">🏛️</div>
+        <div class="icon">
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <!-- 耳朵 -->
+  <polygon points="52,62 40,28 70,48" stroke="#00f5ff" stroke-width="2.5" fill="none"/>
+  <polygon points="148,62 160,28 130,48" stroke="#00f5ff" stroke-width="2.5" fill="none"/>
+  <!-- 内耳 -->
+  <line x1="48" y1="42" x2="58" y2="52" stroke="#ff00ff" stroke-width="1.5" opacity="0.6"/>
+  <line x1="152" y1="42" x2="142" y2="52" stroke="#ff00ff" stroke-width="1.5" opacity="0.6"/>
+  <!-- 头部轮廓 -->
+  <ellipse cx="100" cy="82" rx="52" ry="44" stroke="#00f5ff" stroke-width="2.5" fill="none"/>
+  <!-- 额头虎纹 - 王字 -->
+  <line x1="88" y1="52" x2="112" y2="52" stroke="#ff00ff" stroke-width="2" opacity="0.8"/>
+  <line x1="88" y1="60" x2="112" y2="60" stroke="#ff00ff" stroke-width="2" opacity="0.8"/>
+  <line x1="88" y1="68" x2="112" y2="68" stroke="#ff00ff" stroke-width="2" opacity="0.8"/>
+  <line x1="100" y1="52" x2="100" y2="68" stroke="#ff00ff" stroke-width="2" opacity="0.8"/>
+  <!-- 眼睛 -->
+  <ellipse cx="78" cy="80" rx="10" ry="7" stroke="#00f5ff" stroke-width="2" fill="none"/>
+  <ellipse cx="122" cy="80" rx="10" ry="7" stroke="#00f5ff" stroke-width="2" fill="none"/>
+  <!-- 瞳孔 - 发光 -->
+  <circle cx="80" cy="80" r="3" fill="#ff00ff" opacity="0.9"/>
+  <circle cx="124" cy="80" r="3" fill="#ff00ff" opacity="0.9"/>
+  <circle cx="80" cy="80" r="1.2" fill="#ffffff"/>
+  <circle cx="124" cy="80" r="1.2" fill="#ffffff"/>
+  <!-- 鼻子 -->
+  <path d="M96,94 L100,100 L104,94" stroke="#00f5ff" stroke-width="2" fill="none"/>
+  <!-- 嘴巴 -->
+  <path d="M100,100 L100,105" stroke="#00f5ff" stroke-width="1.5"/>
+  <path d="M88,108 Q94,114 100,105 Q106,114 112,108" stroke="#00f5ff" stroke-width="2" fill="none"/>
+  <!-- 虎牙 -->
+  <line x1="92" y1="108" x2="94" y2="114" stroke="#ffffff" stroke-width="1.5" opacity="0.8"/>
+  <line x1="108" y1="108" x2="106" y2="114" stroke="#ffffff" stroke-width="1.5" opacity="0.8"/>
+  <!-- 胡须 -->
+  <line x1="68" y1="92" x2="42" y2="88" stroke="#00f5ff" stroke-width="1.2" opacity="0.5"/>
+  <line x1="68" y1="98" x2="40" y2="100" stroke="#00f5ff" stroke-width="1.2" opacity="0.5"/>
+  <line x1="68" y1="104" x2="44" y2="110" stroke="#00f5ff" stroke-width="1.2" opacity="0.5"/>
+  <line x1="132" y1="92" x2="158" y2="88" stroke="#00f5ff" stroke-width="1.2" opacity="0.5"/>
+  <line x1="132" y1="98" x2="160" y2="100" stroke="#00f5ff" stroke-width="1.2" opacity="0.5"/>
+  <line x1="132" y1="104" x2="156" y2="110" stroke="#00f5ff" stroke-width="1.2" opacity="0.5"/>
+  <!-- 脸颊条纹 -->
+  <path d="M54,70 Q60,78 56,88" stroke="#ff00ff" stroke-width="1.5" fill="none" opacity="0.5"/>
+  <path d="M58,66 Q66,76 62,88" stroke="#ff00ff" stroke-width="1.5" fill="none" opacity="0.5"/>
+  <path d="M146,70 Q140,78 144,88" stroke="#ff00ff" stroke-width="1.5" fill="none" opacity="0.5"/>
+  <path d="M142,66 Q134,76 138,88" stroke="#ff00ff" stroke-width="1.5" fill="none" opacity="0.5"/>
+  <!-- 身体 -->
+  <path d="M62,120 Q58,145 54,170" stroke="#00f5ff" stroke-width="2.5" fill="none"/>
+  <path d="M138,120 Q142,145 146,170" stroke="#00f5ff" stroke-width="2.5" fill="none"/>
+  <!-- 前腿 -->
+  <path d="M64,170 L62,192 L72,192" stroke="#00f5ff" stroke-width="2.5" fill="none"/>
+  <path d="M136,170 L138,192 L128,192" stroke="#00f5ff" stroke-width="2.5" fill="none"/>
+  <!-- 身体条纹 -->
+  <line x1="70" y1="132" x2="60" y2="140" stroke="#ff00ff" stroke-width="1.5" opacity="0.4"/>
+  <line x1="76" y1="145" x2="64" y2="155" stroke="#ff00ff" stroke-width="1.5" opacity="0.4"/>
+  <line x1="130" y1="132" x2="140" y2="140" stroke="#ff00ff" stroke-width="1.5" opacity="0.4"/>
+  <line x1="124" y1="145" x2="136" y2="155" stroke="#ff00ff" stroke-width="1.5" opacity="0.4"/>
+  <!-- 尾巴 -->
+  <path d="M138,130 Q160,120 168,100 Q172,88 164,82" stroke="#00f5ff" stroke-width="2.5" fill="none"/>
+  <line x1="158" y1="104" x2="168" y2="96" stroke="#ff00ff" stroke-width="1.5" opacity="0.5"/>
+  <line x1="164" y1="94" x2="170" y2="86" stroke="#ff00ff" stroke-width="1.5" opacity="0.5"/>
+  <!-- 赛博朋克装饰 - 电路线 -->
+  <circle cx="78" cy="72" r="1.5" fill="#ff00ff" opacity="0.6"/>
+  <circle cx="122" cy="72" r="1.5" fill="#ff00ff" opacity="0.6"/>
+  <line x1="78" y1="72" x2="78" y2="66" stroke="#ff00ff" stroke-width="1" opacity="0.4"/>
+  <line x1="122" y1="72" x2="122" y2="66" stroke="#ff00ff" stroke-width="1" opacity="0.4"/>
+  <!-- 眼角电路装饰 -->
+  <path d="M66,78 L60,76 L56,78" stroke="#ff00ff" stroke-width="1" fill="none" opacity="0.5"/>
+  <path d="M134,78 L140,76 L144,78" stroke="#ff00ff" stroke-width="1" fill="none" opacity="0.5"/>
+</svg>
+</div>
         <div class="text">五代十国知识图谱</div>
         <div class="hint">点击左侧按钮或搜索人物开始探索</div>
       </div>
@@ -210,7 +1749,7 @@
     <div class="tab-body">
       <div class="tab-pane active" id="pane-qa">
         <div class="qa-msgs" id="qa-msgs">
-          <div class="empty">在下方输入问题，或点击推荐问题</div>
+          <div class="empty">💬 在下方输入问题，或点击推荐问题开始对话</div>
         </div>
         <div class="presets">
           <h4>推荐问题</h4>
@@ -237,7 +1776,85 @@
       </div>
     </div>
   </div>
-</div>
+  </div> <!-- /view-graph -->
+
+  <!-- ====== 视图2: 实体浏览 ====== -->
+  <div class="primary-view" id="view-browse">
+    <div class="browse-view">
+      <div class="browse-left-tree">
+        <div class="browse-breadcrumb" id="browse-breadcrumb">
+          <span class="browse-crumb current">📂 全部分类</span>
+        </div>
+        <div class="browse-list browse-pane" id="browse-list">
+          <div class="empty">点击上方「实体浏览」加载</div>
+        </div>
+      </div>
+      <div class="browse-right-detail">
+        <div class="detail-content" id="browse-detail-content">
+          <div class="empty">在左侧选择一个实体，右侧显示详情</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== 视图3: 藩镇官职 ====== -->
+  <div class="primary-view" id="view-fanzhen">
+    <div class="fanzhen-view">
+      <iframe id="fanzhen-embed-frame"></iframe>
+    </div>
+  </div>
+
+  <!-- ====== 视图4: 知识攫取仪表盘 ====== -->
+  <div class="primary-view" id="view-ingestion">
+    <div class="ingestion-dashboard">
+      <!-- 顶部概览卡片 -->
+      <div class="ing-overview">
+        <div class="ing-card ing-progress-card">
+          <div class="ing-card-title">📊 提取进度</div>
+          <div class="ing-progress-ring-wrap">
+            <svg class="ing-progress-ring" viewBox="0 0 120 120">
+              <circle class="ing-ring-bg" cx="60" cy="60" r="52" />
+              <circle class="ing-ring-fg" id="ing-ring-fg" cx="60" cy="60" r="52" />
+            </svg>
+            <div class="ing-ring-text">
+              <div class="ing-ring-pct" id="ing-pct">0%</div>
+              <div class="ing-ring-sub" id="ing-pct-sub">0 / 0</div>
+            </div>
+          </div>
+          <div class="ing-progress-detail" id="ing-progress-detail"></div>
+        </div>
+        <div class="ing-card ing-entities-card">
+          <div class="ing-card-title">🏛️ 实体总览</div>
+          <div class="ing-entity-grid" id="ing-entity-grid"></div>
+        </div>
+        <div class="ing-card ing-roles-card">
+          <div class="ing-card-title">👤 人物角色分布</div>
+          <div class="ing-bar-chart" id="ing-roles-chart"></div>
+        </div>
+        <div class="ing-card ing-events-card">
+          <div class="ing-card-title">⚔️ 事件类型分布</div>
+          <div class="ing-bar-chart" id="ing-events-chart"></div>
+        </div>
+      </div>
+      <!-- 下方详情区 -->
+      <div class="ing-detail-row">
+        <div class="ing-card ing-chapters-card">
+          <div class="ing-card-title">📖 章节进度</div>
+          <div class="ing-chapters-list" id="ing-chapters-list"></div>
+        </div>
+        <div class="ing-card ing-relations-card">
+          <div class="ing-card-title">🔗 关系类型 TOP 15</div>
+          <div class="ing-rel-list" id="ing-rel-list"></div>
+        </div>
+        <div class="ing-card ing-recent-card">
+          <div class="ing-card-title">🕐 最近处理</div>
+          <div class="ing-recent-list" id="ing-recent-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div> <!-- /main -->
 
 <script>
 var _visLoaded = false;
@@ -252,10 +1869,59 @@ document.head.appendChild(_visScript);
 var net = null;
 var _allNodes = [];
 var _currentPersonUid = null;
-var NC = { Person:'#ef4444', Dynasty:'#f59e0b', Event:'#3b82f6', Place:'#22c55e' };
-var EC = { FATHER_OF:'#3b82f6', ADOPTED_SON:'#ef4444', KILLED:'#dc2626', BETRAYED:'#a855f7', REPLACED:'#f59e0b', SERVED:'#6b7280', FOUNDED:'#22c55e', SUCCEEDED:'#f97316', SPOUSE:'#ec4899', SIBLING:'#06b6d4', COMMANDED:'#fb923c', SUBORDINATE:'#6b7280', ALLIED_WITH:'#22c55e', RIVAL:'#ef4444', SURRENDERED_TO:'#92400e', PARTICIPATED_IN:'#14b8a6' };
+var NC = { Person:'#ff3366', Dynasty:'#ffaa00', Event:'#00f5ff', Place:'#00ff88', OfficialTitle:'#ff8800' };
+var EC = {
+  FATHER_OF:'#0080ff', MOTHER_OF:'#0080ff', ADOPTED_SON:'#ff3366', KILLED:'#ff3366', KILLED_BY:'#ff3366',
+  BETRAYED:'#9d00ff', REPLACED:'#ffaa00', SERVED:'#6b7280', FOUNDED:'#00ff88', SUCCEEDED:'#ffaa00',
+  SPOUSE:'#ff66aa', SIBLING:'#00f5ff', COMMANDED:'#ffaa00', SUBORDINATE:'#6b7280', ALLIED_WITH:'#00ff88',
+  RIVAL:'#ff3366', SURRENDERED_TO:'#9d00ff', PARTICIPATED_IN:'#00f5ff', PARTICIPATED_IN_BATTLE:'#00f5ff',
+  DEFEATED:'#ff3366', DEFEATED_BY:'#ff3366', BESIEGED:'#ff3366', ATTACKED:'#ff3366',
+  SUED_FOR_PEACE:'#ffaa00', REQUESTED_AID:'#ffaa00', PLANNED_TO_SIEGE:'#9d00ff', PLANNED_TO:'#9d00ff',
+  CAPTURED:'#ff3366', CAPTURED_BY:'#ff3366', SUPPORTED:'#00ff88', APPOINTED:'#0080ff',
+  LOYAL_TO:'#00ff88', REBELLED_AGAINST:'#ff3366', FLED_TO:'#9d00ff', EVOLVED_INTO:'#00f5ff',
+  ADVISOR:'#0080ff', SAVED:'#00ff88', RESCUED:'#00ff88', AMBUSHED:'#ff3366',
+  CONSPIRED:'#9d00ff', EXECUTED:'#ff3366', ASSASSINATED:'#ff3366', EXILED:'#9d00ff',
+  ENTHRONED:'#ffaa00', DETHRONED:'#ff3366', ABDICATED:'#ffaa00', USURPED:'#ff3366',
+  DEFECTED:'#9d00ff', DEFECTED_TO:'#9d00ff', FRIEND:'#00ff88', SON_OF:'#0080ff',
+  HELD_POSITION:'#ff8800', APPOINTED_TO:'#ff8800', SUPERVISES:'#ff8800'
+};
 
 /* ──── 关系类型中文映射 ──── */
+var REL_CN_LOCAL = {
+  FATHER_OF:'父→子', MOTHER_OF:'母→子', ADOPTED_SON:'义父→义子', SPOUSE:'夫妻', SIBLING:'兄弟',
+  BETRAYED:'背叛', KILLED:'杀害', REPLACED:'篡位', SERVED:'效力', COMMANDED:'统帅',
+  SUBORDINATE:'臣属', ADVISOR:'谋士', ALLIED_WITH:'结盟', RIVAL:'敌人',
+  SURRENDERED_TO:'投降', SUCCEEDED:'继位', FOUNDED:'创建', PARTICIPATED_IN:'参与',
+  OCCURRED_AT:'发生于', FRIEND:'朋友', GRANDFATHER_OF:'祖→孙', UNCLE_OF:'叔→侄',
+  NEPHEW_OF:'侄→叔', CAPTURED:'俘获', CAPTURED_BY:'被俘', SUPPORTED:'支持',
+  DEFEATED:'击败', DEFEATED_BY:'被击败', APPOINTED:'任命', SAVED:'救助',
+  LOYAL_TO:'忠于', RULER:'统治者', RULER_OF:'统治', ATTACKED:'进攻', PROTECTED:'庇护',
+  COLLEAGUE:'同僚', REBELLED_AGAINST:'叛变', SON_OF:'子→父', SON:'子',
+  DESCENDANT:'后裔', BROTHER:'兄弟', RELATIVE:'亲属', FOUNDER_OF:'创立',
+  TRUSTED:'信任', INFLUENCED:'影响', IMPRISONED:'囚禁', ARRESTED:'逮捕',
+  PUNISHED:'惩罚', REWARDED:'赏赐', RECOMMENDED:'举荐', REJECTED:'拒绝',
+  SUSPECTED:'猜忌', THREATENED:'威胁', FEARED:'畏惧', RESPECTED:'敬重',
+  INSULTED:'侮辱', GOVERNED:'治理', GOVERNOR:'治理', GOVERNOR_OF:'治理',
+  BUILT:'建造', CONQUERED:'征服', DEFENDED:'防御', SURRENDERED:'投降',
+  GRANTED_TITLE:'授爵', RENAMED:'赐名', SENT:'派遣', HOLDING_HOSTAGE:'扣押人质',
+  HOSTAGE:'人质', SHELTERED:'庇护', SHELTERED_BY:'被庇护', OPPOSED:'反对',
+  SUPPORTED_BY:'被支持', DAUGHTER_OF:'女→父', PARENT_OF:'亲→子', GRANDSON:'孙',
+  GRANDSON_OF:'孙→祖', ADOPTED:'收养', LEADER_OF:'首领', TEACHER:'师', STUDENT:'徒',
+  ENEMY_OF:'敌对', KILLED_BY:'被杀', DIED_IN:'死于', FLED_TO:'逃往',
+  PRECEDED:'前任', PREDECESSOR:'前任', SUCCESSOR:'继任',
+  PARTICIPATED_IN_BATTLE:'参战', BESIEGED:'围攻', SUED_FOR_PEACE:'求和',
+  REQUESTED_AID:'求援', PLANNED_TO_SIEGE:'谋攻', PLANNED_TO:'谋划',
+  EVOLVED_INTO:'演变为', NEGOTIATED_WITH:'谈判', RESCUED:'救援', AMBUSHED:'伏击',
+  RETREATED:'撤退', RETREATED_TO:'退往', ADVANCED_TO:'进军', OCCUPIED:'占据',
+  RAIDED:'袭击', POISONED:'毒杀', EXILED:'流放', DEMOTED:'贬谪', PROMOTED:'提拔',
+  STATIONED_AT:'驻守', GARRISONED:'镇守', TRANSFERRED:'调任', ENVOY_TO:'出使',
+  CONSPIRED:'密谋', PLOTTED_AGAINST:'阴谋反对', ALLIED_AGAINST:'联合对抗',
+  ENTHRONED:'登基', DETHRONED:'废黜', ABDICATED:'禅让', USURPED:'篡夺',
+  DEPOSED:'废立', EXECUTED:'处死', ASSASSINATED:'刺杀', DEFECTED:'叛逃',
+  DEFECTED_TO:'投奔', MARRIED:'联姻', AVENGED:'复仇', TRIBUTARY_OF:'朝贡',
+  VASSAL_OF:'附庸', OVERLORD_OF:'宗主',
+  HELD_POSITION:'担任', APPOINTED_TO:'被任命为', SUPERVISES:'下辖'
+};
 var REL_CN = {};
 var REL_CN_LOADED = false;
 
@@ -267,7 +1933,13 @@ function loadRelCN() {
 }
 
 function relCN(engType) {
-  return REL_CN[engType] || engType;
+  if (REL_CN[engType]) return REL_CN[engType];
+  if (REL_CN_LOCAL[engType]) return REL_CN_LOCAL[engType];
+  // 尝试智能翻译：去掉_BY/_OF/_TO/_IN等后缀再查找
+  var base = engType.replace(/_BY$|_OF$|_TO$|_IN$|_AT$/, '');
+  if (REL_CN_LOCAL[base]) return REL_CN_LOCAL[base];
+  // 最终返回英文原文
+  return engType;
 }
 
 /* ──── 简易 Markdown → HTML 渲染器 ──── */
@@ -316,6 +1988,43 @@ function showErr(msg) {
   _errTimer = setTimeout(function() { el.style.display = 'none'; }, 6000);
 }
 
+/* ── 一级视图切换 ── */
+var _currentPrimaryView = 'graph';
+function switchPrimaryView(name) {
+  _currentPrimaryView = name;
+  document.querySelectorAll('.pnav-item').forEach(function(el) {
+    el.classList.toggle('active', el.dataset.view === name);
+  });
+  document.querySelectorAll('.primary-view').forEach(function(el) {
+    el.classList.toggle('active', el.id === 'view-' + name);
+  });
+
+  // 懒加载：实体浏览
+  if (name === 'browse' && !_browseInited) {
+    _browseInited = true;
+    initBrowse();
+  }
+  // 懒加载：知识攫取仪表盘
+  if (name === 'ingestion') {
+    if (!_ingestionInited) {
+      _ingestionInited = true;
+      loadIngestionDashboard();
+    }
+  }
+  // 懒加载：藩镇官职 iframe
+  if (name === 'fanzhen') {
+    var frame = $('fanzhen-embed-frame');
+    if (!frame.src || frame.src === 'about:blank' || !frame.src.includes('/fanzhen')) {
+      frame.src = '/fanzhen';
+    } else {
+      // 已加载过，延迟触发 resize 让 vis-network 重新适配
+      setTimeout(function() {
+        try { frame.contentWindow.dispatchEvent(new Event('resize')); } catch(e) {}
+      }, 200);
+    }
+  }
+}
+
 function switchTab(name) {
   document.querySelectorAll('.panel-tab').forEach(function(t) { t.classList.toggle('active', t.dataset.tab === name); });
   document.querySelectorAll('.tab-pane').forEach(function(p) { p.classList.toggle('active', p.id === 'pane-' + name); });
@@ -359,30 +2068,53 @@ function render(data, opts) {
 
     _allNodes = filteredNodes;
 
-    var nodes = filteredNodes.map(function(n) {
+var nodes = filteredNodes.map(function(n) {
       var lb = (n.labels && n.labels[0]) || 'Person';
       var isCenter = opts.centerUid && n.uid === opts.centerUid;
+      var nodeColor = NC[lb] || '#ff3366';
       return {
         id: n.uid, label: n.name || n.uid,
-        color: { background: NC[lb] || '#ef4444', border: isCenter ? '#fff' : (NC[lb] || '#ef4444') },
-        font: { color: '#fff', size: lb === 'Event' ? 9 : 12 },
-        shape: lb === 'Person' ? 'dot' : lb === 'Dynasty' ? 'diamond' : lb === 'Event' ? 'square' : 'triangle',
-        size: isCenter ? 24 : (lb === 'Dynasty' ? 20 : lb === 'Person' ? 14 : 8),
-        borderWidth: isCenter ? 3 : 1,
+        color: {
+          background: nodeColor,
+          border: isCenter ? '#fff' : nodeColor,
+          highlight: { background: '#fff', border: nodeColor },
+          hover: { background: nodeColor, border: '#fff' }
+        },
+        font: { color: '#fff', size: lb === 'Event' ? 10 : 13, strokeWidth: 3, strokeColor: 'rgba(0,0,0,0.9)' },
+        shape: lb === 'Person' ? 'dot' : lb === 'Dynasty' ? 'diamond' : lb === 'Event' ? 'square' : lb === 'OfficialTitle' ? 'hexagon' : 'triangle',
+        size: isCenter ? 28 : (lb === 'Dynasty' ? 22 : lb === 'Person' ? 16 : lb === 'OfficialTitle' ? 18 : 10),
+        borderWidth: isCenter ? 4 : 2,
+        borderWidthSelected: 5,
+        shadow: {
+          enabled: true,
+          color: nodeColor + '44',
+          size: isCenter ? 25 : 10,
+          x: 0,
+          y: 0
+        },
         _raw: n
       };
     });
 
-    var edges = filteredEdges.map(function(e, i) {
-      var isEvent = e.rel_type === 'PARTICIPATED_IN';
+var edges = filteredEdges.map(function(e, i) {
+      var isEvent = e.rel_type === 'PARTICIPATED_IN' || e.rel_type === 'PARTICIPATED_IN_BATTLE';
+      var edgeColor = EC[e.rel_type] || '#4b5563';
       return {
         id: 'e' + i, from: e.source, to: e.target,
         label: isEvent ? '' : relCN(e.rel_type),
-        color: { color: EC[e.rel_type] || '#4b5563', opacity: isEvent ? 0.3 : 0.7 },
-        font: { size: 9, color: '#6b7280', strokeWidth: 0 },
-        arrows: { to: { scaleFactor: isEvent ? 0.3 : 0.6 } },
+        color: {
+          color: edgeColor + '18',
+          highlight: edgeColor + 'ff',
+          hover: edgeColor + 'bb',
+          opacity: 1.0
+        },
+        font: { size: 9, color: 'rgba(100,116,139,0.25)', strokeWidth: 0, background: 'transparent' },
+        arrows: { to: { scaleFactor: isEvent ? 0.2 : 0.4 } },
         smooth: { type: 'curvedCW', roundness: 0.12 },
-        width: isEvent ? 0.5 : 1,
+        width: isEvent ? 0.3 : 0.8,
+        hoverWidth: 3,
+        selectionWidth: 4,
+        shadow: { enabled: false },
         _raw: e
       };
     });
@@ -395,7 +2127,7 @@ function render(data, opts) {
     var gravConst = totalN > 100 ? -120 : totalN > 50 ? -100 : -80;
     var springLen = totalN > 100 ? 250 : totalN > 50 ? 200 : 160;
 
-    net = new vis.Network(container,
+net = new vis.Network(container,
       { nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) },
       {
         physics: {
@@ -411,18 +2143,163 @@ function render(data, opts) {
           stabilization: { iterations: 200 },
           maxVelocity: 30
         },
-        interaction: { hover: true, tooltipDelay: 200, zoomView: true, dragView: true },
-        layout: { improvedLayout: totalN < 60 }
+        interaction: {
+          hover: true,
+          tooltipDelay: 150,
+          zoomView: true,
+          dragView: true,
+          navigationButtons: false,
+          keyboard: true
+        },
+        layout: { improvedLayout: totalN < 60 },
+        nodes: {
+          chosen: {
+            node: function(values, id, selected, hovering) {
+              if (hovering || selected) {
+                values.shadowSize = 40;
+                values.size = values.size * 1.15;
+              }
+            }
+          }
+        },
+        edges: {
+          chosen: {
+            edge: function(values, id, selected, hovering) {
+              if (selected) {
+                values.width = 4;
+                values.shadow = true;
+                values.shadowSize = 25;
+                values.shadowColor = 'rgba(0,245,255,0.6)';
+              } else if (hovering) {
+                values.width = 3;
+                values.shadow = true;
+                values.shadowSize = 15;
+                values.shadowColor = 'rgba(0,245,255,0.4)';
+              }
+            }
+          }
+        }
       }
     );
+
+    /* ── 选中/悬停节点时，高亮关联边和相邻节点，其他淡化 ── */
+    var _nodesDS = net.body.data.nodes;
+    var _edgesDS = net.body.data.edges;
+    var _allNodeIds = nodes.map(function(n) { return n.id; });
+    var _allEdgeIds = edges.map(function(e) { return e.id; });
+    var _neighborMap = {}; // nodeId -> Set of connected edgeIds
+    var _edgeNodeMap = {}; // edgeId -> {from, to}
+    edges.forEach(function(e) {
+      if (!_neighborMap[e.from]) _neighborMap[e.from] = [];
+      if (!_neighborMap[e.to]) _neighborMap[e.to] = [];
+      _neighborMap[e.from].push(e.id);
+      _neighborMap[e.to].push(e.id);
+      _edgeNodeMap[e.id] = { from: e.from, to: e.to };
+    });
+
+    function highlightConnected(selectedNodeId) {
+      if (!selectedNodeId) {
+        // 恢复所有节点和边
+        var resetNodes = _allNodeIds.map(function(id) {
+          return { id: id, opacity: 1.0, font: { color: '#fff', size: nodes.find(function(n){return n.id===id;}).font.size, strokeWidth: 3, strokeColor: 'rgba(0,0,0,0.9)' } };
+        });
+        var resetEdges = _allEdgeIds.map(function(id) {
+          var origEdge = edges.find(function(e){return e.id===id;});
+          return { id: id, color: origEdge.color, width: origEdge.width, font: origEdge.font };
+        });
+        _nodesDS.update(resetNodes);
+        _edgesDS.update(resetEdges);
+        return;
+      }
+      var connEdges = _neighborMap[selectedNodeId] || [];
+      var connNodeSet = {};
+      connNodeSet[selectedNodeId] = true;
+      connEdges.forEach(function(eid) {
+        var ep = _edgeNodeMap[eid];
+        connNodeSet[ep.from] = true;
+        connNodeSet[ep.to] = true;
+      });
+      var connEdgeSet = {};
+      connEdges.forEach(function(eid) { connEdgeSet[eid] = true; });
+
+      var updNodes = _allNodeIds.map(function(id) {
+        if (connNodeSet[id]) {
+          return { id: id, opacity: 1.0, font: { color: '#fff', size: nodes.find(function(n){return n.id===id;}).font.size, strokeWidth: 3, strokeColor: 'rgba(0,0,0,0.9)' } };
+        } else {
+          return { id: id, opacity: 0.12, font: { color: 'rgba(255,255,255,0.1)', size: 8, strokeWidth: 0 } };
+        }
+      });
+      var updEdges = _allEdgeIds.map(function(id) {
+        var origEdge = edges.find(function(e){return e.id===id;});
+        var rawColor = EC[origEdge._raw.rel_type] || '#4b5563';
+        if (connEdgeSet[id]) {
+          return {
+            id: id,
+            color: { color: rawColor + 'ee', highlight: rawColor + 'ff', hover: rawColor + 'ff' },
+            width: 2.5,
+            font: { size: 11, color: rawColor + 'dd', strokeWidth: 0, background: 'rgba(0,0,0,0.8)' },
+            shadow: { enabled: true, color: rawColor + '80', size: 15, x: 0, y: 0 }
+          };
+        } else {
+          return {
+            id: id,
+            color: { color: rawColor + '06', highlight: rawColor + '06', hover: rawColor + '06' },
+            width: 0.2,
+            font: { size: 0, color: 'transparent' },
+            shadow: { enabled: false }
+          };
+        }
+      });
+      _nodesDS.update(updNodes);
+      _edgesDS.update(updEdges);
+    }
 
     net.on('click', function(p) {
       if (p.nodes.length) {
         var nodeId = p.nodes[0];
+        highlightConnected(nodeId);
         var nd = nodes.find(function(x) { return x.id === nodeId; });
         if (nd && nd._raw) {
           onNodeClick(nd._raw);
         }
+      } else if (p.edges.length) {
+        // 点击边时也高亮两端节点
+        var edgeId = p.edges[0];
+        var ep = _edgeNodeMap[edgeId];
+        if (ep) {
+          // 高亮两个端点
+          var combined = {};
+          combined[ep.from] = true;
+          combined[ep.to] = true;
+          var connE = [];
+          _allEdgeIds.forEach(function(eid) {
+            var eep = _edgeNodeMap[eid];
+            if ((combined[eep.from] && combined[eep.to])) connE.push(eid);
+          });
+          var updN = _allNodeIds.map(function(id) {
+            if (combined[id]) {
+              return { id: id, opacity: 1.0, font: { color: '#fff', size: nodes.find(function(n){return n.id===id;}).font.size, strokeWidth: 3, strokeColor: 'rgba(0,0,0,0.9)' } };
+            } else {
+              return { id: id, opacity: 0.12, font: { color: 'rgba(255,255,255,0.1)', size: 8, strokeWidth: 0 } };
+            }
+          });
+          var connESet = {};
+          connE.forEach(function(eid) { connESet[eid] = true; });
+          var updE = _allEdgeIds.map(function(id) {
+            var origEdge = edges.find(function(e){return e.id===id;});
+            var rawColor = EC[origEdge._raw.rel_type] || '#4b5563';
+            if (connESet[id]) {
+              return { id: id, color: { color: rawColor + 'ee', highlight: rawColor + 'ff', hover: rawColor + 'ff' }, width: 3, font: { size: 12, color: rawColor + 'dd', strokeWidth: 0, background: 'rgba(0,0,0,0.8)' }, shadow: { enabled: true, color: rawColor + '80', size: 15, x: 0, y: 0 } };
+            } else {
+              return { id: id, color: { color: rawColor + '06', highlight: rawColor + '06', hover: rawColor + '06' }, width: 0.2, font: { size: 0, color: 'transparent' }, shadow: { enabled: false } };
+            }
+          });
+          _nodesDS.update(updN);
+          _edgesDS.update(updE);
+        }
+      } else {
+        // 点击空白处恢复
+        highlightConnected(null);
       }
     });
 
@@ -727,7 +2604,7 @@ function showPersonDetail(uid) {
       if (d.events && d.events.length) {
         h += '<div class="detail-section"><h4>参与事件 (' + d.events.length + ')</h4>';
         d.events.forEach(function(e) {
-          h += '<div class="ev-card" onclick="showEventDetail(\'' + esc(e.uid) + '\')">';
+          h += '<div class="ev-card" onclick="showEventModal(\'' + esc(e.uid) + '\')">';
           h += '<h4>' + esc(e.name) + '</h4>';
           h += '<div class="meta">' + (e.year ? '📅 ' + e.year + ' ' : '') +
                (e.event_type ? '<span style="background:#334155;padding:1px 6px;border-radius:3px;font-size:10px;">' + esc(e.event_type) + '</span>' : '') + '</div>';
@@ -744,7 +2621,7 @@ function showPersonDetail(uid) {
 
       el.innerHTML = h;
       _currentPersonUid = uid;
-      loadPersonEvents(uid);
+      loadPersonEvents(uid, p);
 
       // 异步加载 LLM 总结
       apiFetch('/api/graph/person/' + uid + '/summary')
@@ -934,21 +2811,203 @@ function loadPersonGraph(uid, displayName) {
     .catch(function(e) { showSpin(false); showErr('加载关系失败: ' + e.message); });
 }
 
-function loadPersonEvents(uid) {
+function loadPersonEvents(uid, personData) {
   apiFetch('/api/graph/person/' + uid + '/events')
     .then(function(d) {
       var el = $('events-list');
       var evts = d.events || [];
-      if (!evts.length) { el.innerHTML = '<div class="empty">该人物暂无关联事件</div>'; return; }
-      el.innerHTML = evts.map(function(e) {
-        return '<div class="ev-card" onclick="showEventDetail(\'' + esc(e.uid) + '\');switchTab(\'detail\');"><h4>' + esc(e.name) + '</h4>'
-          + '<div class="meta">' + (e.year ? '📅 ' + e.year + ' ' : '') + (e.event_type ? '<span style="background:#334155;padding:1px 6px;border-radius:3px;font-size:10px;">' + esc(e.event_type) + '</span>' : '') + '</div>'
-          + (e.description ? '<div class="desc">' + esc(e.description.substring(0, 60)) + (e.description.length > 60 ? '...' : '') + '</div>' : '')
-          + '</div>';
-      }).join('');
+      if (!evts.length && !personData) { el.innerHTML = '<div class="empty">该人物暂无关联事件</div>'; return; }
+
+      // 构建时间轴数据：出生 + 事件 + 死亡
+      var items = [];
+      var pName = (personData && personData.name) || '';
+      var birthY = personData && personData.birth_year;
+      var deathY = personData && personData.death_year;
+      var deathCause = personData && personData.death_cause;
+
+      if (birthY) items.push({ year: birthY, type: 'birth', name: pName + ' 出生', special: true });
+      evts.forEach(function(e) { items.push(e); });
+      if (deathY) items.push({ year: deathY, type: 'death', name: pName + ' 去世' + (deathCause ? '（' + deathCause + '）' : ''), special: true });
+
+      // 按年份排序（null年份排最后）
+      items.sort(function(a, b) {
+        var ya = a.year || 9999, yb = b.year || 9999;
+        if (ya !== yb) return ya - yb;
+        if (a.type === 'birth') return -1;
+        if (b.type === 'birth') return 1;
+        if (a.type === 'death') return 1;
+        if (b.type === 'death') return -1;
+        return 0;
+      });
+
+      if (!items.length) { el.innerHTML = '<div class="empty">该人物暂无关联事件</div>'; return; }
+
+      // 事件类型 → dot/type class
+      function evtClass(t) {
+        if (!t) return '';
+        if (/战争|战役/.test(t)) return 'war';
+        if (/政变/.test(t)) return 'coup';
+        if (/皇位|登基|称帝|建国/.test(t)) return 'throne';
+        if (/背叛|叛/.test(t)) return 'betray';
+        if (/结盟|联盟/.test(t)) return 'alliance';
+        return '';
+      }
+
+      var h = '<div class="timeline">';
+      // 标题
+      h += '<div class="timeline-title">' + esc(pName) + ' · 生平时间轴';
+      if (birthY || deathY) h += '<span class="tl-years">(' + (birthY || '?') + ' — ' + (deathY || '?') + ')</span>';
+      h += '</div>';
+      h += '<div class="timeline-track">';
+
+      items.forEach(function(item) {
+        var isBirth = item.type === 'birth';
+        var isDeath = item.type === 'death';
+        var isSpecial = item.special;
+        var cls = evtClass(item.event_type);
+
+        h += '<div class="tl-item' + (isSpecial ? ' tl-life' : '') + '"'
+           + (isSpecial ? '' : ' onclick="showEventModal(\'' + esc(item.uid) + '\')"') + '>';
+
+        // 年份
+        var yrCls = isBirth ? ' yr-life' : (isDeath ? ' yr-death' : '');
+        h += '<div class="tl-year' + yrCls + '">' + (item.year || '?') + '</div>';
+
+        // 圆点
+        var dotCls = isBirth ? ' dot-birth' : (isDeath ? ' dot-death' : (cls ? ' dot-' + cls : ''));
+        h += '<div class="tl-dot' + dotCls + '"></div>';
+
+        // 卡片
+        var cardCls = isBirth ? ' card-life' : (isDeath ? ' card-death' : '');
+        h += '<div class="tl-card' + cardCls + '">';
+        h += '<div class="tl-name">' + esc(item.name) + '</div>';
+
+        if (!isSpecial) {
+          h += '<div class="tl-meta">';
+          if (item.event_type) h += '<span class="tl-type' + (cls ? ' type-' + cls : '') + '">' + esc(item.event_type) + '</span>';
+          if (item.location) h += '<span>📍 ' + esc(item.location) + '</span>';
+          h += '</div>';
+          if (item.description) {
+            var desc = item.description.length > 60 ? item.description.substring(0, 60) + '...' : item.description;
+            h += '<div class="tl-desc">' + esc(desc) + '</div>';
+          }
+        }
+
+        h += '</div>'; // .tl-card
+        h += '</div>'; // .tl-item
+      });
+
+      h += '</div></div>';
+      el.innerHTML = h;
     })
     .catch(function() { $('events-list').innerHTML = '<div class="empty">事件加载失败</div>'; });
 }
+
+/* ──── 事件详情弹窗 ──── */
+
+function showEventModal(uid) {
+  if (!uid) return;
+  var ov = document.getElementById('evt-modal-overlay');
+  var hdr = document.getElementById('evt-modal-header');
+  var body = document.getElementById('evt-modal-body');
+
+  hdr.innerHTML = '<h3>加载中...</h3>';
+  body.innerHTML = '<div style="text-align:center;padding:30px;"><span class="ispin"></span></div>';
+
+  // 先显示（无动画），然后下一帧加 fade-in 触发动画
+  ov.style.display = 'flex';
+  requestAnimationFrame(function() { requestAnimationFrame(function() { ov.classList.add('show', 'fade-in'); }); });
+
+  apiFetch('/api/graph/event/' + uid)
+    .then(function(d) {
+      var e = d.event;
+
+      // Header
+      var hh = '<h3>' + esc(e.name) + '</h3><div>';
+      if (e.event_type) {
+        var cls = '';
+        if (/战争|战役/.test(e.event_type)) cls = ' type-war';
+        else if (/政变/.test(e.event_type)) cls = ' type-coup';
+        else if (/皇位|登基|称帝|建国/.test(e.event_type)) cls = ' type-throne';
+        else if (/背叛|叛/.test(e.event_type)) cls = ' type-betray';
+        hh += '<span class="badge tl-type' + cls + '">' + esc(e.event_type) + '</span>';
+      }
+      if (e.year) hh += '<span class="badge" style="background:rgba(0,128,255,0.15);border:1px solid rgba(0,128,255,0.3);color:var(--blue);">📅 ' + e.year + '年</span>';
+      if (e.location) hh += '<span class="badge" style="background:rgba(0,255,136,0.1);border:1px solid rgba(0,255,136,0.2);color:var(--green);">📍 ' + esc(e.location) + '</span>';
+      hh += '</div>';
+      hdr.innerHTML = hh;
+
+      // Body
+      var bh = '';
+      if (e.outcome) bh += '<div class="evt-modal-row"><span class="lbl">结果：</span>' + esc(e.outcome) + '</div>';
+      if (e.description) bh += '<div class="evt-modal-row"><span class="lbl">描述：</span>' + esc(e.description) + '</div>';
+
+      // 参与人物
+      if (d.participants && d.participants.length) {
+        bh += '<div class="evt-modal-section"><h4>参与人物 (' + d.participants.length + ')</h4><div>';
+        d.participants.forEach(function(p) {
+          bh += '<span class="evt-modal-participant" onclick="hideEventModal();searchAndShow(\'' + esc(p.name) + '\')">'
+             + esc(p.name)
+             + (p.event_role ? ' <span style="color:#64748b;font-size:9px;">(' + esc(p.event_role) + ')</span>' : '')
+             + '</span>';
+        });
+        bh += '</div></div>';
+      }
+
+      // AI 总结占位
+      bh += '<div class="evt-modal-section"><h4>📝 AI 事件总结</h4>';
+      bh += '<div class="evt-modal-summary" id="evt-modal-summary"><span class="ispin"></span> 生成中...</div>';
+      bh += '</div>';
+
+      // 书中原文
+      if (d.book_snippets && d.book_snippets.length) {
+        bh += '<div class="evt-modal-section"><h4>📖 书中原文片段</h4>';
+        d.book_snippets.forEach(function(s) {
+          var txt = esc(s.text);
+          if (s.keyword) {
+            var re = new RegExp('(' + s.keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'g');
+            txt = txt.replace(re, '<mark>$1</mark>');
+          }
+          bh += '<div class="snippet-card"><div class="book">📚 ' + esc(s.book) + '</div><div class="text">' + txt + '</div></div>';
+        });
+        bh += '</div>';
+      }
+
+      body.innerHTML = bh;
+
+      // 异步加载 AI 总结
+      apiFetch('/api/graph/event/' + uid + '/summary')
+        .then(function(s) {
+          var box = document.getElementById('evt-modal-summary');
+          if (box) {
+            box.innerHTML = mdToHtml(s.summary);
+            if (s.from_cache) box.insertAdjacentHTML('afterend', '<div style="font-size:10px;color:#475569;margin-top:2px;">（已缓存）</div>');
+          }
+        })
+        .catch(function(err) {
+          var box = document.getElementById('evt-modal-summary');
+          if (box) box.innerHTML = '<span style="color:#94a3b8;font-size:12px;">总结生成失败</span>';
+        });
+    })
+    .catch(function(e) {
+      hdr.innerHTML = '<h3 style="color:var(--red);">加载失败</h3>';
+      body.innerHTML = '<div style="color:#94a3b8;padding:20px;">' + esc(e.message) + '</div>';
+    });
+}
+
+function hideEventModal() {
+  var ov = document.getElementById('evt-modal-overlay');
+  ov.classList.remove('fade-in');
+  setTimeout(function() { ov.classList.remove('show'); ov.style.display = 'none'; }, 300);
+}
+
+// ESC 关闭事件弹窗
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    var ov = document.getElementById('evt-modal-overlay');
+    if (ov && ov.classList.contains('show')) hideEventModal();
+  }
+});
 
 /* ──── QA ──── */
 
@@ -963,7 +3022,20 @@ function askQ(q) {
   if (msgs.querySelector('.empty')) msgs.innerHTML = '';
   var div = document.createElement('div');
   div.className = 'msg';
-  div.innerHTML = '<div class="msg-q">' + esc(q) + '</div><div class="msg-a"><span class="ispin"></span> 思考中...</div>';
+
+  // 用户气泡（右侧）
+  var userRow = '<div class="msg-row user">'
+    + '<div class="msg-avatar user-avatar">🧑</div>'
+    + '<div class="msg-bubble"><div class="msg-q">' + esc(q) + '</div></div>'
+    + '</div>';
+
+  // AI 气泡（左侧），先显示加载中
+  var aiRow = '<div class="msg-row ai">'
+    + '<div class="msg-avatar ai-avatar">🤖</div>'
+    + '<div class="msg-bubble"><div class="msg-a"><span class="ispin"></span> 思考中...</div></div>'
+    + '</div>';
+
+  div.innerHTML = userRow + aiRow;
   msgs.appendChild(div);
   msgs.scrollTop = msgs.scrollHeight;
 
@@ -973,18 +3045,27 @@ function askQ(q) {
     body: JSON.stringify({ question: q })
   }).then(function(d) {
     if (d.detail) {
-      div.querySelector('.msg-a').innerHTML = '<span style="color:var(--red);">错误: ' + esc(d.detail) + '</span>';
+      div.querySelector('.msg-a').textContent = '错误: ' + d.detail;
+      div.querySelector('.msg-a').style.color = 'var(--red)';
       return;
     }
-    var answerHtml = (d.answer || '未获取到回答').replace(/\n/g, '<br>');
-    var h = '<div class="msg-a">' + answerHtml + '</div>';
-    if (d.cypher) h += '<div class="msg-cypher">' + esc(d.cypher) + '</div>';
+    var answerText = d.answer || '未获取到回答';
+
+    // AI 回答气泡（纯文本，换行用 pre-wrap 处理）
+    var aiContent = '<div class="msg-row ai">'
+      + '<div class="msg-avatar ai-avatar">🤖</div>'
+      + '<div class="msg-bubble"><div class="msg-a">' + esc(answerText) + '</div></div>'
+      + '</div>';
+
+    // 底部元信息（不显示 Cypher）
     var count = d.graph_data ? d.graph_data.length : 0;
-    h += '<div class="msg-meta">命中 ' + count + ' 条图谱数据</div>';
-    div.innerHTML = '<div class="msg-q">' + esc(q) + '</div>' + h;
+    var metaHtml = '<div class="msg-meta">📊 命中 ' + count + ' 条图谱数据</div>';
+
+    div.innerHTML = userRow + aiContent + metaHtml;
     msgs.scrollTop = msgs.scrollHeight;
   }).catch(function(e) {
-    div.querySelector('.msg-a').innerHTML = '<span style="color:var(--red);">请求失败: ' + esc(e.message) + '</span>';
+    div.querySelector('.msg-a').textContent = '请求失败: ' + e.message;
+    div.querySelector('.msg-a').style.color = 'var(--red)';
   });
 }
 
@@ -995,9 +3076,12 @@ loadRelCN();
 apiFetch('/api/graph/stats')
   .then(function(d) {
     var html = '';
-    var labels = { Person: '人物', Dynasty: '政权', Event: '事件', Place: '地点', Relation: '关系' };
-    Object.keys(d).forEach(function(k) {
-      html += '<div class="stat-item">' + (labels[k] || k) + ': <span>' + d[k] + '</span></div>';
+    var labels = { Person: '人物', Dynasty: '政权', Event: '事件', Place: '地点', OfficialTitle: '官职', Relation: '关系' };
+    var order = ['Person', 'Dynasty', 'Event', 'Place', 'OfficialTitle', 'Relation'];
+    order.forEach(function(k) {
+      if (d[k] !== undefined) {
+        html += '<div class="stat-item">' + labels[k] + ': <span>' + d[k] + '</span></div>';
+      }
     });
     $('stats-bar').innerHTML = html;
   })
@@ -1006,29 +3090,613 @@ apiFetch('/api/graph/stats')
 window.onerror = function(msg) { showErr('JS错误: ' + msg); return false; };
 
 /* ──── 藩镇官职系统 ──── */
-function openFanzhen() {
-  var ov = document.getElementById('fanzhen-overlay');
-  var frame = document.getElementById('fanzhen-frame');
-  if (!frame.src || frame.src === 'about:blank') { frame.src = '/fanzhen'; }
-  ov.classList.add('show');
-}
-function closeFanzhen() {
-  document.getElementById('fanzhen-overlay').classList.remove('show');
-}
-</script>
 
-<!-- 藩镇官职系统覆盖层 -->
-<div class="fanzhen-overlay" id="fanzhen-overlay">
-  <div class="fanzhen-bar">
-    <h3>🏯 唐代藩镇官职系统 — 据张国刚《唐代藩镇研究》整理</h3>
-    <button class="fz-close" onclick="closeFanzhen()">✕ 关闭</button>
-  </div>
-  <iframe class="fanzhen-frame" id="fanzhen-frame"></iframe>
-</div>
+/* ──── 知识攫取仪表盘 ──── */
+
+var _ingestionInited = false;
+var _ingestionTimer = null;
+// 速度追踪：用于计算预估剩余时间
+var _ingLastPollTime = null;   // 上次轮询的时间戳 (ms)
+var _ingLastProcessed = null;  // 上次轮询时已处理数
+var _ingSpeedSamples = [];     // 最近的速度采样 (chunks/sec)
+var _ingEstRemain = null;      // 最新预估剩余秒数
+
+function loadIngestionDashboard() {
+  // 初次加载时显示loading
+  var grid = $('ing-entity-grid');
+  if (grid && !grid.innerHTML.trim()) {
+    grid.innerHTML = '<div class="ing-loading"><span class="ispin"></span> 加载中...</div>';
+  }
+  _fetchIngestionData();
+  // 每30秒自动刷新
+  if (_ingestionTimer) clearInterval(_ingestionTimer);
+  _ingestionTimer = setInterval(function() {
+    if (_currentPrimaryView === 'ingestion') _fetchIngestionData();
+  }, 30000);
+}
+
+function _fetchIngestionData() {
+  apiFetch('/api/ingestion/dashboard')
+    .then(function(d) { _renderIngestionDashboard(d); })
+    .catch(function(e) {
+      var grid = $('ing-entity-grid');
+      if (grid) grid.innerHTML = '<div class="ing-loading" style="color:var(--red);">加载失败: ' + esc(e.message) + '</div>';
+    });
+}
+
+function _renderIngestionDashboard(d) {
+  var prog = d.progress || {};
+  var stats = d.entity_stats || {};
+
+  // ── 0. 计算处理速度和预估剩余时间 ──
+  var nowMs = Date.now();
+  var curProcessed = prog.processed_chunks || 0;
+  var remaining = prog.remaining || 0;
+
+  if (_ingLastPollTime !== null && _ingLastProcessed !== null) {
+    var dtSec = (nowMs - _ingLastPollTime) / 1000;
+    var dChunks = curProcessed - _ingLastProcessed;
+    if (dtSec > 5 && dChunks > 0) {
+      var speed = dChunks / dtSec; // chunks/sec
+      _ingSpeedSamples.push(speed);
+      if (_ingSpeedSamples.length > 10) _ingSpeedSamples.shift(); // 保留最近10个样本
+    }
+  }
+  _ingLastPollTime = nowMs;
+  _ingLastProcessed = curProcessed;
+
+  // 加权平均速度（近期权重更大）
+  var avgSpeed = 0;
+  if (_ingSpeedSamples.length > 0) {
+    var wSum = 0, wTotal = 0;
+    for (var si = 0; si < _ingSpeedSamples.length; si++) {
+      var w = si + 1;
+      wSum += _ingSpeedSamples[si] * w;
+      wTotal += w;
+    }
+    avgSpeed = wSum / wTotal;
+  }
+
+  // 判断是否正在运行（通过心跳文件，120秒内有心跳即认为在运行）
+  var heartbeat = prog.heartbeat;
+  var isRunning = false;
+  var hbStatus = '';
+  var hbChunk = '';
+  var hbWorkers = 0;
+  var hbRateLimited = false;
+  if (heartbeat && heartbeat.timestamp) {
+    var diffSec = (nowMs / 1000) - heartbeat.timestamp;
+    hbStatus = heartbeat.status || '';
+    hbChunk = heartbeat.current_chunk || '';
+    hbWorkers = heartbeat.workers || 1;
+    hbRateLimited = heartbeat.rate_limited || false;
+    // status=finished 说明已经跑完了
+    if (hbStatus === 'finished') {
+      isRunning = false;
+    } else if (diffSec < 120) {
+      isRunning = true;
+    }
+  }
+
+  // 预估剩余时间
+  var etaText = '';
+  if (remaining === 0) {
+    etaText = '<span style="color:#00ff88">✅ 提取完成</span>';
+  } else if (!isRunning) {
+    etaText = '<span style="color:#ff8800">⏸ 未在运行</span>';
+  } else if (avgSpeed > 0) {
+    var etaSec = Math.round(remaining / avgSpeed);
+    _ingEstRemain = etaSec;
+    if (etaSec < 60) {
+      etaText = '预计剩余 <span style="color:var(--cyan)">' + etaSec + ' 秒</span>';
+    } else if (etaSec < 3600) {
+      etaText = '预计剩余 <span style="color:var(--cyan)">' + Math.round(etaSec / 60) + ' 分钟</span>';
+    } else {
+      var h = Math.floor(etaSec / 3600);
+      var m = Math.round((etaSec % 3600) / 60);
+      etaText = '预计剩余 <span style="color:var(--cyan)">' + h + ' 小时 ' + m + ' 分钟</span>';
+    }
+    etaText += ' <span style="color:#4a5568">(~' + (avgSpeed * 60).toFixed(1) + ' chunks/min)</span>';
+  } else {
+    etaText = '<span style="color:#64748b">⏳ 采样中（等待2次刷新）...</span>';
+  }
+  // 附加运行态详情
+  if (isRunning && hbChunk) {
+    etaText += '<br><span style="color:#718096;font-size:0.75rem">⚙️ 正在处理: ' + hbChunk + '</span>';
+    if (hbRateLimited) {
+      etaText += ' <span style="color:#f56565;font-size:0.75rem">🚫 限流中(单线程)</span>';
+    } else if (hbWorkers > 1) {
+      etaText += ' <span style="color:#68d391;font-size:0.75rem">⚡ ' + hbWorkers + '线程并发</span>';
+    }
+  }
+
+  // ── 1. 进度环 ──
+  var pct = prog.percent || 0;
+  var circumference = 326.73;
+  var offset = circumference - (pct / 100) * circumference;
+  var ring = $('ing-ring-fg');
+  if (ring) ring.style.strokeDashoffset = offset;
+  var pctEl = $('ing-pct');
+  if (pctEl) pctEl.textContent = pct + '%';
+  var subEl = $('ing-pct-sub');
+  if (subEl) subEl.textContent = prog.processed_chunks + ' / ' + prog.total_chunks;
+  var detEl = $('ing-progress-detail');
+  if (detEl) detEl.innerHTML = '剩余 <span style="color:var(--cyan)">' + remaining + '</span> 个块待处理<br>' + etaText;
+
+  // ── 2. 实体总览 ──
+  var entityMap = [
+    { key: 'Person', icon: '👤', label: '人物' },
+    { key: 'Event', icon: '⚔️', label: '事件' },
+    { key: 'Dynasty', icon: '🏛️', label: '政权' },
+    { key: 'Place', icon: '📍', label: '地点' },
+    { key: 'OfficialTitle', icon: '🎖️', label: '官职' },
+    { key: 'Relation', icon: '🔗', label: '关系' },
+  ];
+  var gridEl = $('ing-entity-grid');
+  if (gridEl) {
+    var gh = '';
+    entityMap.forEach(function(e) {
+      gh += '<div class="ing-entity-item">'
+        + '<div class="ing-entity-icon">' + e.icon + '</div>'
+        + '<div class="ing-entity-count">' + (stats[e.key] || 0).toLocaleString() + '</div>'
+        + '<div class="ing-entity-label">' + e.label + '</div>'
+        + '</div>';
+    });
+    gridEl.innerHTML = gh;
+  }
+
+  // ── 3. 人物角色分布 ──
+  var rolesEl = $('ing-roles-chart');
+  if (rolesEl && d.person_roles) {
+    var maxRole = d.person_roles.length > 0 ? d.person_roles[0].count : 1;
+    var rh = '';
+    d.person_roles.slice(0, 8).forEach(function(r) {
+      var w = Math.max(2, Math.round(r.count / maxRole * 100));
+      rh += '<div class="ing-bar-row">'
+        + '<div class="ing-bar-label">' + esc(r.role) + '</div>'
+        + '<div class="ing-bar-track"><div class="ing-bar-fill role-bar" style="width:' + w + '%"></div></div>'
+        + '<div class="ing-bar-count">' + r.count + '</div>'
+        + '</div>';
+    });
+    rolesEl.innerHTML = rh;
+  }
+
+  // ── 4. 事件类型分布 ──
+  var eventsEl = $('ing-events-chart');
+  if (eventsEl && d.event_types) {
+    var maxEv = d.event_types.length > 0 ? d.event_types[0].count : 1;
+    var eh = '';
+    d.event_types.slice(0, 8).forEach(function(e) {
+      var w = Math.max(2, Math.round(e.count / maxEv * 100));
+      eh += '<div class="ing-bar-row">'
+        + '<div class="ing-bar-label">' + esc(e.type) + '</div>'
+        + '<div class="ing-bar-track"><div class="ing-bar-fill event-bar" style="width:' + w + '%"></div></div>'
+        + '<div class="ing-bar-count">' + e.count + '</div>'
+        + '</div>';
+    });
+    eventsEl.innerHTML = eh;
+  }
+
+  // ── 5. 章节进度 ──
+  var chaptersEl = $('ing-chapters-list');
+  if (chaptersEl && d.chapter_progress) {
+    var ch = '';
+    d.chapter_progress.forEach(function(c) {
+      var cls = c.percent >= 100 ? 'done' : (c.percent > 0 ? 'partial' : 'empty');
+      ch += '<div class="ing-ch-row">'
+        + '<div class="ing-ch-name" title="' + esc(c.name) + '">' + esc(c.name) + '</div>'
+        + '<div class="ing-ch-bar"><div class="ing-ch-fill ' + cls + '" style="width:' + c.percent + '%"></div></div>'
+        + '<div class="ing-ch-pct">' + c.percent + '%</div>'
+        + '<div class="ing-ch-count">' + c.processed + '/' + c.total + '</div>'
+        + '</div>';
+    });
+    chaptersEl.innerHTML = ch;
+  }
+
+  // ── 6. 关系TOP ──
+  var relEl = $('ing-rel-list');
+  if (relEl && d.top_relations) {
+    var maxRel = d.top_relations.length > 0 ? d.top_relations[0].count : 1;
+    var rlh = '';
+    d.top_relations.forEach(function(r) {
+      var w = Math.max(2, Math.round(r.count / maxRel * 100));
+      rlh += '<div class="ing-bar-row">'
+        + '<div class="ing-bar-label" title="' + esc(r.type) + '">' + esc(r.type_cn) + '</div>'
+        + '<div class="ing-bar-track"><div class="ing-bar-fill rel-bar" style="width:' + w + '%"></div></div>'
+        + '<div class="ing-bar-count">' + r.count.toLocaleString() + '</div>'
+        + '</div>';
+    });
+    relEl.innerHTML = rlh;
+  }
+
+  // ── 7. 最近处理 ──
+  var recentEl = $('ing-recent-list');
+  if (recentEl && d.recent_chunks) {
+    if (d.recent_chunks.length === 0) {
+      recentEl.innerHTML = '<div class="ing-loading">暂无已处理的 chunk</div>';
+    } else {
+      var rch = '';
+      d.recent_chunks.forEach(function(c) {
+        rch += '<div class="ing-recent-item">'
+          + '<span class="ing-recent-id">' + esc(c.chunk_id) + '</span>'
+          + '<span class="ing-recent-ch">' + esc(c.chapter) + '</span>'
+          + '<span class="ing-recent-chars">' + (c.char_count || 0) + '字</span>'
+          + '</div>';
+      });
+      recentEl.innerHTML = rch;
+    }
+  }
+}
+
+/* ──── 实体浏览（文件夹树形） ──── */
+
+var _browseInited = false;
+var _browseCats = []; // 缓存的一级分类数据
+
+function initBrowse() {
+  browseLoadRoot();
+}
+
+/* 加载一级分类列表（人物/事件/政权/地点），始终显示 */
+function browseLoadRoot() {
+  var list = $('browse-list');
+  list.innerHTML = '<div class="empty"><span class="ispin"></span> 加载中...</div>';
+
+  apiFetch('/api/browse/categories').then(function(d) {
+    var cats = d.categories || [];
+    _browseCats = cats;
+    var h = '';
+    cats.forEach(function(c, i) {
+      h += '<div class="browse-item" id="cat-item-' + i + '" data-cat-id="' + esc(c.id) + '" data-cat-idx="' + i + '">';
+      h += '<span class="bi-icon">📁</span>';
+      h += '<div class="bi-body"><div class="bi-name">' + esc(c.name) + '</div></div>';
+      h += '<span class="bi-count">' + c.count + '</span>';
+      h += '<span class="bi-arrow">›</span>';
+      h += '</div>';
+      h += '<div class="browse-sub-container" id="cat-sub-' + i + '"></div>';
+    });
+    list.innerHTML = h;
+
+    // 绑定一级分类点击（展开/折叠）
+    cats.forEach(function(c, i) {
+      document.getElementById('cat-item-' + i).onclick = function() {
+        toggleCategory(i, c.id, c.name, c.icon);
+      };
+    });
+  }).catch(function(e) {
+    list.innerHTML = '<div class="empty">加载失败: ' + esc(e.message) + '</div>';
+  });
+}
+
+/* 展开/折叠一级分类 */
+function toggleCategory(idx, catId, catName, catIcon) {
+  var item = document.getElementById('cat-item-' + idx);
+  var sub = document.getElementById('cat-sub-' + idx);
+  var isExpanded = sub.classList.contains('expanded');
+
+  if (isExpanded) {
+    // 折叠
+    item.classList.remove('cat-active');
+    sub.classList.remove('expanded');
+    sub.innerHTML = '';
+    return;
+  }
+
+  // 展开：先高亮
+  item.classList.add('cat-active');
+  sub.innerHTML = '<div style="padding:10px 12px;"><span class="ispin"></span> <span style="color:#4a5568;font-size:11px;">加载中...</span></div>';
+  sub.classList.add('expanded');
+
+  // 请求二级分组
+  apiFetch('/api/browse/' + catId + '/groups').then(function(d) {
+    var groups = d.groups || [];
+    if (!groups.length) {
+      // 无子分组，直接在一级下方展开实体列表
+      loadEntitiesIntoContainer(sub, catId, '', '', catName);
+      return;
+    }
+    var h = '';
+    groups.forEach(function(g, gi) {
+      var subId = 'grp-' + idx + '-' + gi;
+      h += '<div class="browse-item" id="' + subId + '-item" data-grp-idx="' + gi + '">';
+      h += '<span class="bi-icon">' + (g.icon || '📂') + '</span>';
+      h += '<div class="bi-body"><div class="bi-name">' + esc(g.name) + '</div></div>';
+      h += '<span class="bi-count">' + g.count + '</span>';
+      h += '<span class="bi-arrow">›</span>';
+      h += '</div>';
+      h += '<div class="browse-sub-container" id="' + subId + '-sub"></div>';
+    });
+    sub.innerHTML = h;
+
+    // 绑定二级分组点击
+    groups.forEach(function(g, gi) {
+      var subId = 'grp-' + idx + '-' + gi;
+      document.getElementById(subId + '-item').onclick = function(ev) {
+        ev.stopPropagation();
+        toggleGroup(subId, g.filter.label, g.filter.field, g.filter.value, g.name);
+      };
+    });
+  }).catch(function(e) {
+    sub.innerHTML = '<div style="padding:10px 12px;color:#f87171;font-size:11px;">加载失败</div>';
+  });
+}
+
+/* 展开/折叠二级分组 */
+function toggleGroup(subId, label, field, value, groupName) {
+  var item = document.getElementById(subId + '-item');
+  var sub = document.getElementById(subId + '-sub');
+  var isExpanded = sub.classList.contains('expanded');
+
+  if (isExpanded) {
+    item.classList.remove('sub-active');
+    sub.classList.remove('expanded');
+    sub.innerHTML = '';
+    return;
+  }
+
+  item.classList.add('sub-active');
+  sub.innerHTML = '<div style="padding:8px 10px;"><span class="ispin"></span> <span style="color:#4a5568;font-size:11px;">加载中...</span></div>';
+  sub.classList.add('expanded');
+
+  loadEntitiesIntoContainer(sub, label, field, value, groupName);
+}
+
+/* 在指定容器中加载实体列表 */
+function loadEntitiesIntoContainer(container, label, field, value, groupName) {
+  var url = '/api/browse/entities?label=' + encodeURIComponent(label);
+  if (field) url += '&field=' + encodeURIComponent(field);
+  if (value) url += '&value=' + encodeURIComponent(value);
+
+  apiFetch(url).then(function(d) {
+    var entities = d.entities || [];
+    var entityLabel = d.label;
+    if (!entities.length) {
+      container.innerHTML = '<div style="padding:8px 12px;color:#4a5568;font-size:11px;">暂无数据</div>';
+      return;
+    }
+    // 搜索框
+    var h = '<div class="browse-sub-search"><input placeholder="搜索 ' + esc(groupName) + '..." oninput="filterSubEntities(this)"></div>';
+    entities.forEach(function(ent) {
+      var subtitle = '';
+      if (ent.year) subtitle += ent.year + '年';
+      if (ent.sub && ent.sub !== value) subtitle += (subtitle ? ' · ' : '') + ent.sub;
+      var icon = entityLabel === 'Person' ? '👤' : entityLabel === 'Event' ? '⚔️' : entityLabel === 'Dynasty' ? '🏛️' : entityLabel === 'OfficialTitle' ? '🎖️' : '📍';
+      h += '<div class="browse-item entity-leaf" data-name="' + esc(ent.name).toLowerCase() + '" data-lbl="' + esc(entityLabel) + '" data-uid="' + esc(ent.uid) + '" data-ename="' + esc(ent.name) + '">';
+      h += '<span class="bi-icon">' + icon + '</span>';
+      h += '<div class="bi-body"><div class="bi-name">' + esc(ent.name) + '</div>';
+      if (subtitle) h += '<div class="bi-sub">' + esc(subtitle) + '</div>';
+      h += '</div>';
+      h += '</div>';
+    });
+    container.innerHTML = h;
+
+    // 绑定实体点击
+    container.querySelectorAll('.entity-leaf').forEach(function(el) {
+      el.onclick = function(ev) {
+        ev.stopPropagation();
+        browseOpenEntity(el.dataset.lbl, el.dataset.uid, el.dataset.ename);
+      };
+    });
+  }).catch(function(e) {
+    container.innerHTML = '<div style="padding:8px 12px;color:#f87171;font-size:11px;">加载失败</div>';
+  });
+}
+
+/* 在子容器内搜索筛选实体 */
+function filterSubEntities(input) {
+  var kw = input.value.trim().toLowerCase();
+  var container = input.closest('.browse-sub-container');
+  if (!container) return;
+  container.querySelectorAll('.entity-leaf').forEach(function(el) {
+    var name = el.dataset.name || '';
+    el.style.display = (!kw || name.indexOf(kw) !== -1) ? '' : 'none';
+  });
+}
+
+function browseOpenEntity(label, uid, name) {
+  // 点击具体实体：在浏览视图右侧显示详情
+  var detailEl = $('browse-detail-content');
+  detailEl.innerHTML = '<div style="text-align:center;padding:30px;"><span class="ispin"></span> 加载中...</div>';
+
+  if (label === 'Person') {
+    showPersonDetailIn(detailEl, uid);
+  } else if (label === 'Event') {
+    showEventDetailIn(detailEl, uid);
+  } else {
+    showGenericDetailIn(detailEl, label, uid);
+  }
+}
+
+/* 在指定容器中显示人物详情（复用 showPersonDetail 的逻辑） */
+function showPersonDetailIn(el, uid) {
+  apiFetch('/api/graph/person/' + uid + '/detail')
+    .then(function(d) {
+      var p = d.person;
+      var h = '<div class="detail-header">';
+      h += '<h3>' + esc(p.name) + '</h3>';
+      if (p.role) h += '<span class="badge">' + esc(p.role) + '</span>';
+      h += '<button class="btn btn-ghost" style="margin-left:12px;padding:4px 12px;font-size:10px;" onclick="goToGraphView(\'' + esc(uid) + '\',\'' + esc(p.name) + '\')">🕸️ 在图谱中查看</button>';
+      h += '</div>';
+      if (p.aliases && p.aliases.length) h += '<div class="detail-row"><span class="lbl">别名：</span>' + esc(p.aliases.join('、')) + '</div>';
+      if (p.loyalty && p.loyalty.length) h += '<div class="detail-row"><span class="lbl">势力：</span>' + esc(p.loyalty.join(' → ')) + '</div>';
+      if (p.birth_year || p.death_year) h += '<div class="detail-row"><span class="lbl">生卒：</span>' + (p.birth_year || '?') + ' — ' + (p.death_year || '?') + '</div>';
+      if (p.death_cause) h += '<div class="detail-row"><span class="lbl">死因：</span>' + esc(p.death_cause) + '</div>';
+      if (p.description) h += '<div class="detail-row"><span class="lbl">简述：</span>' + esc(p.description) + '</div>';
+
+      // LLM 总结
+      h += '<div class="detail-section"><div class="summary-label">📝 生平总结</div>';
+      h += '<div id="browse-person-summary" class="summary-box"><div class="summary-loading"><span class="ispin"></span> AI 生成中...</div></div>';
+      h += '</div>';
+
+      // Relations
+      if (d.relations && d.relations.length) {
+        h += '<div class="detail-section"><h4>人物关系 (' + d.relations.length + ')</h4>';
+        d.relations.forEach(function(r) {
+          var arrow = r.direction === 'outgoing' ? '→' : '←';
+          var cnType = relCN(r.rel_type);
+          h += '<div class="rel-edit-row">';
+          h += '<span class="rel-edit-name" onclick="browseOpenEntity(\'Person\',\'' + esc(r.other_uid) + '\',\'' + esc(r.other_name) + '\')">' + esc(r.other_name) + '</span>';
+          h += '<span class="rel-edit-type">' + arrow + ' ' + esc(cnType) + '</span>';
+          h += '</div>';
+        });
+        h += '</div>';
+      }
+
+      // Events
+      if (d.events && d.events.length) {
+        h += '<div class="detail-section"><h4>参与事件 (' + d.events.length + ')</h4>';
+        d.events.forEach(function(e) {
+          h += '<div class="ev-card" onclick="browseOpenEntity(\'Event\',\'' + esc(e.uid) + '\',\'' + esc(e.name) + '\')">';
+          h += '<h4>' + esc(e.name) + '</h4>';
+          h += '<div class="meta">' + (e.year ? '📅 ' + e.year + ' ' : '') +
+               (e.event_type ? '<span style="background:#334155;padding:1px 6px;border-radius:3px;font-size:10px;">' + esc(e.event_type) + '</span>' : '') + '</div>';
+          if (e.description) h += '<div class="desc">' + esc(e.description.substring(0, 80)) + (e.description.length > 80 ? '...' : '') + '</div>';
+          h += '</div>';
+        });
+        h += '</div>';
+      }
+
+      el.innerHTML = h;
+
+      // 异步加载 LLM 总结
+      apiFetch('/api/graph/person/' + uid + '/summary')
+        .then(function(s) {
+          var box = document.getElementById('browse-person-summary');
+          if (box) box.innerHTML = mdToHtml(s.summary);
+        }).catch(function(err) {
+          var box = document.getElementById('browse-person-summary');
+          if (box) box.innerHTML = '<div style="color:#94a3b8;font-size:12px;">总结生成失败</div>';
+        });
+    })
+    .catch(function(e) { el.innerHTML = '<div class="empty">加载失败: ' + esc(e.message) + '</div>'; });
+}
+
+/* 在指定容器中显示事件详情 */
+function showEventDetailIn(el, uid) {
+  apiFetch('/api/graph/event/' + uid)
+    .then(function(d) {
+      var e = d.event;
+      var h = '<div class="detail-header">';
+      h += '<h3>' + esc(e.name) + '</h3>';
+      if (e.event_type) h += '<span class="badge">' + esc(e.event_type) + '</span>';
+      h += '</div>';
+      if (e.year) h += '<div class="detail-row"><span class="lbl">年份：</span>' + e.year + '</div>';
+      if (e.location) h += '<div class="detail-row"><span class="lbl">地点：</span>' + esc(e.location) + '</div>';
+      if (e.outcome) h += '<div class="detail-row"><span class="lbl">结果：</span>' + esc(e.outcome) + '</div>';
+      if (e.description) h += '<div class="detail-row"><span class="lbl">描述：</span>' + esc(e.description) + '</div>';
+
+      // LLM 总结
+      h += '<div class="detail-section"><div class="summary-label">📝 事件总结</div>';
+      h += '<div id="browse-event-summary" class="summary-box"><div class="summary-loading"><span class="ispin"></span> AI 生成中...</div></div>';
+      h += '</div>';
+
+      // Participants
+      if (d.participants && d.participants.length) {
+        h += '<div class="detail-section"><h4>参与人物 (' + d.participants.length + ')</h4><div>';
+        d.participants.forEach(function(p) {
+          h += '<span class="participant-tag" onclick="browseOpenEntity(\'Person\',\'' + esc(p.uid) + '\',\'' + esc(p.name) + '\')">' + esc(p.name) +
+               (p.event_role ? ' <span style="color:#64748b;font-size:10px;">(' + esc(p.event_role) + ')</span>' : '') + '</span>';
+        });
+        h += '</div></div>';
+      }
+
+      el.innerHTML = h;
+
+      // 异步加载 LLM 事件总结
+      apiFetch('/api/graph/event/' + uid + '/summary')
+        .then(function(s) {
+          var box = document.getElementById('browse-event-summary');
+          if (box) box.innerHTML = mdToHtml(s.summary);
+        }).catch(function(err) {
+          var box = document.getElementById('browse-event-summary');
+          if (box) box.innerHTML = '<div style="color:#94a3b8;font-size:12px;">总结生成失败</div>';
+        });
+    })
+    .catch(function(e) { el.innerHTML = '<div class="empty">加载失败: ' + esc(e.message) + '</div>'; });
+}
+
+/* 在指定容器中显示通用详情（Dynasty/Place） */
+function showGenericDetailIn(el, label, uid) {
+  apiFetch('/api/browse/entity_detail?label=' + encodeURIComponent(label) + '&uid=' + encodeURIComponent(uid))
+    .then(function(d) {
+      var props = d.entity || {};
+      var h = '<div class="detail-header"><h3>' + esc(props.name || uid) + '</h3>';
+      if (props.faction_type) h += '<span class="badge">' + esc(props.faction_type) + '</span>';
+      if (props.category) h += '<span class="badge" style="background:#ff8800;">' + esc(props.category) + '</span>';
+      if (props.source === 'seed') h += '<span class="badge" style="background:#ffaa00;color:#000;">★ 权威</span>';
+      h += '</div>';
+      if (props.aliases && props.aliases.length) h += '<div class="detail-row"><span class="lbl">别名：</span>' + esc(props.aliases.join('、')) + '</div>';
+      if (props.rank) h += '<div class="detail-row"><span class="lbl">品级：</span>' + esc(props.rank) + '</div>';
+      if (props.description) h += '<div class="detail-row"><span class="lbl">简述：</span>' + esc(props.description) + '</div>';
+      if (props.duties) h += '<div class="detail-row"><span class="lbl">职责：</span>' + esc(props.duties) + '</div>';
+      if (props.start_year || props.end_year) h += '<div class="detail-row"><span class="lbl">年份：</span>' + (props.start_year || '?') + ' — ' + (props.end_year || '?') + '</div>';
+      if (props.capital) h += '<div class="detail-row"><span class="lbl">都城：</span>' + esc(props.capital) + '</div>';
+      if (props.founder) h += '<div class="detail-row"><span class="lbl">建国者：</span>' + esc(props.founder) + '</div>';
+      if (props.predecessor) h += '<div class="detail-row"><span class="lbl">前身：</span>' + esc(props.predecessor) + '</div>';
+
+      // 官职特有：展示担任者
+      if (label === 'OfficialTitle') {
+        h += '<div id="generic-holders" style="margin-top:10px;padding-top:8px;border-top:1px solid #333;"><span class="lbl">担任者：</span><span style="color:#888;">加载中...</span></div>';
+      }
+
+      el.innerHTML = h;
+
+      // 异步加载官职担任者
+      if (label === 'OfficialTitle') {
+        apiFetch('/api/browse/OfficialTitle/holders?uid=' + encodeURIComponent(uid))
+          .then(function(hd) {
+            var hel = document.getElementById('generic-holders');
+            if (!hel) return;
+            var holders = hd.holders || [];
+            if (holders.length === 0) {
+              hel.innerHTML = '<span class="lbl">担任者：</span><span style="color:#666;">暂无关联人物</span>';
+              return;
+            }
+            var hh = '<span class="lbl">担任者（' + holders.length + '人）：</span><div style="margin-top:6px;">';
+            holders.forEach(function(p) {
+              var yr = p.year ? ' (' + p.year + ')' : '';
+              hh += '<div style="display:inline-block;background:#ff880015;border:1px solid #ff880033;border-radius:3px;padding:2px 8px;margin:2px;font-size:12px;cursor:pointer;" onclick="goToGraphView(\'' + esc(p.uid) + '\',\'' + esc(p.name) + '\')">';
+              hh += '👤 ' + esc(p.name) + '<span style="color:#888;font-size:10px;">' + yr + '</span></div>';
+            });
+            hh += '</div>';
+            hel.innerHTML = hh;
+          })
+          .catch(function() {});
+      }
+    })
+    .catch(function(e) {
+      el.innerHTML = '<div class="empty">加载详情失败: ' + esc(e.message) + '</div>';
+    });
+}
+
+/* 从浏览视图跳转到图谱视图查看某人物 */
+function goToGraphView(uid, name) {
+  switchPrimaryView('graph');
+  $('search-input').value = name;
+  showSpin(true); hideOverlay();
+  loadPersonGraph(uid, name);
+  loadPersonEvents(uid);
+  showPersonDetail(uid);
+  switchTab('detail');
+}
+
+/* renderBrowseList / updateBrowseBreadcrumb / filterBrowseList 已由树形展开逻辑替代 */
+
+/* ──── 藩镇官职系统（已提升为一级视图） ──── */
+</script>
 
 <!-- 全局模态框 -->
 <div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)hideModal()">
   <div id="modal-body"></div>
+</div>
+
+<!-- 事件详情弹窗 -->
+<div class="evt-modal-overlay" id="evt-modal-overlay" onclick="if(event.target===this)hideEventModal()">
+  <div class="evt-modal">
+    <button class="evt-modal-close" onclick="hideEventModal()">✕</button>
+    <div class="evt-modal-header" id="evt-modal-header"></div>
+    <div class="evt-modal-body" id="evt-modal-body"></div>
+  </div>
 </div>
 
 </body>

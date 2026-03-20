@@ -92,7 +92,23 @@ EXTRACTION_SYSTEM_PROMPT = """你是一位五代十国历史专家和知识图�
 }
 ```
 
-### 5. 关系 (Relation)
+### 5. 官职 (OfficialTitle)
+**重要**：提取的是通用官职名称，不含地名前缀。
+例如文本中出现"河东节度使"、"河阳节度使"，提取的官职应该是"节度使"，而不是"河东节度使"。
+同理，"马军都虞候"和"步军都虞候"是两个不同的官职，但"成德军马军都虞候"中应提取"马军都虞候"。
+
+```json
+{
+  "uid": "title_拼音（全小写下划线连接）",
+  "name": "官职名称（如'节度使'、'行军司马'、'马军都虞候'）",
+  "aliases": ["官职简称或别名，如'节帅'"],
+  "category": "军职/文职/中枢/地方/监察/藩镇/其他",
+  "rank": "品级（如'从二品'，如不确定可为null）",
+  "description": "官职职责简要描述"
+}
+```
+
+### 6. 关系 (Relation)
 ```json
 {
   "source": "源人物名字（用 original_name）",
@@ -107,6 +123,7 @@ EXTRACTION_SYSTEM_PROMPT = """你是一位五代十国历史专家和知识图�
 - 亲族：FATHER_OF, MOTHER_OF, SIBLING, SPOUSE
 - 核心（重点提取！）：ADOPTED_SON（义子）, BETRAYED（背叛）, KILLED（杀害）, REPLACED（篡位/取代）
 - 政治军事：SERVED（效力）, COMMANDED（统帅）, ALLIED_WITH（结盟）, SUCCEEDED（继位）, SUBORDINATE（下属）, ADVISOR（谋臣）, RIVAL（对手）, SURRENDERED_TO（投降）
+- 官职相关：HELD_POSITION（人物→官职，某人担任某官职）, APPOINTED_TO（人物→官职，被任命为某官职）
 
 ## 输出格式
 只返回 JSON（不要有任何思考过程、解释文字或 markdown 标记），格式：
@@ -116,6 +133,7 @@ EXTRACTION_SYSTEM_PROMPT = """你是一位五代十国历史专家和知识图�
   "dynasties": [...],
   "events": [...],
   "places": [...],
+  "official_titles": [...],
   "relations": [...]
 }
 ```
@@ -216,7 +234,8 @@ class KnowledgeExtractor:
             )
             logger.info(
                 f"块 {chunk.chunk_id}: 提取 {len(result.persons)} 人物, "
-                f"{len(result.events)} 事件, {len(result.relations)} 关系"
+                f"{len(result.events)} 事件, {len(result.official_titles)} 官职, "
+                f"{len(result.relations)} 关系"
             )
             return result
 

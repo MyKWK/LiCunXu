@@ -6,7 +6,7 @@
 3. 确保核心历史脉络的准确性
 """
 
-from models.entities import Dynasty, Event, Person, Place, Relation
+from models.entities import Dynasty, Event, OfficialTitle, Person, Place, Relation
 
 # ═══════════════════════════════════════════════════════════════
 # 五代政权
@@ -261,3 +261,9 @@ SEED_RELATIONS = [
     Relation(source="柴荣", target="郭威", relation_type="SUCCEEDED", year=954,
              description="柴荣继郭威之位"),
 ]
+
+# ═══════════════════════════════════════════════════════════════
+# 种子官职（从 seed_titles.py 导入）
+# ═══════════════════════════════════════════════════════════════
+
+from data.seed.seed_titles import SEED_OFFICIAL_TITLES, SEED_TITLE_UIDS, SEED_TITLE_ALL_NAMES

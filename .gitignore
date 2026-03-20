@@ -21,3 +21,4 @@ data/processed/*
 !data/processed/.gitkeep
 data/summaries/
 neo4j_data/
+docs/

@@ -586,6 +586,55 @@ RELATION_TYPE_CN = {
     "PRECEDED_BY": "前任",
     "PREDECESSOR": "前任",
     "SUCCESSOR": "继任",
+    "PARTICIPATED_IN_BATTLE": "参战",
+    "BESIEGED": "围攻",
+    "SUED_FOR_PEACE": "求和",
+    "REQUESTED_AID": "求援",
+    "PLANNED_TO_SIEGE": "谋攻",
+    "PLANNED_TO": "谋划",
+    "TITLE": "封号",
+    "EVOLVED_INTO": "演变为",
+    "NEGOTIATED_WITH": "谈判",
+    "RESCUED": "救援",
+    "AMBUSHED": "伏击",
+    "RETREATED": "撤退",
+    "RETREATED_TO": "退往",
+    "ADVANCED_TO": "进军",
+    "OCCUPIED": "占据",
+    "RAIDED": "袭击",
+    "POISONED": "毒杀",
+    "EXILED": "流放",
+    "DEMOTED": "贬谪",
+    "PROMOTED": "提拔",
+    "STATIONED_AT": "驻守",
+    "GARRISONED": "镇守",
+    "TRANSFERRED": "调任",
+    "ENVOY_TO": "出使",
+    "CONSPIRED": "密谋",
+    "PLOTTED_AGAINST": "阴谋反对",
+    "ALLIED_AGAINST": "联合对抗",
+    "CELEBRATED": "庆贺",
+    "HONORED": "尊崇",
+    "ENTHRONED": "登基",
+    "DETHRONED": "废黜",
+    "ABDICATED": "禅让",
+    "USURPED": "篡夺",
+    "DEPOSED": "废立",
+    "EXECUTED": "处死",
+    "ASSASSINATED": "刺杀",
+    "POISONED_BY": "被毒杀",
+    "BANISHED": "放逐",
+    "RECALLED": "召回",
+    "DEFECTED": "叛逃",
+    "DEFECTED_TO": "投奔",
+    "MARRIED": "联姻",
+    "AVENGED": "复仇",
+    "TRIBUTARY_OF": "朝贡",
+    "VASSAL_OF": "附庸",
+    "OVERLORD_OF": "宗主",
+    "HELD_POSITION": "担任",
+    "APPOINTED_TO": "被任命为",
+    "SUPERVISES": "下辖",
 }
 
 
@@ -593,6 +642,541 @@ RELATION_TYPE_CN = {
 async def get_relation_types_cn():
     """获取关系类型中文映射"""
     return RELATION_TYPE_CN
+
+
+# ─────────────────── 实体浏览（树形分类） ───────────────────
+
+
+@app.get("/api/browse/categories")
+async def browse_categories():
+    """获取实体浏览的根分类（顶层文件夹）"""
+    from graph.connection import neo4j_conn
+
+    try:
+        # 各类型统计
+        person_cnt = neo4j_conn.run_query("MATCH (n:Person) RETURN count(n) AS cnt")
+        event_cnt = neo4j_conn.run_query("MATCH (n:Event) RETURN count(n) AS cnt")
+        dynasty_cnt = neo4j_conn.run_query("MATCH (n:Dynasty) RETURN count(n) AS cnt")
+        place_cnt = neo4j_conn.run_query("MATCH (n:Place) RETURN count(n) AS cnt")
+        title_cnt = neo4j_conn.run_query("MATCH (n:OfficialTitle) RETURN count(n) AS cnt")
+
+        return {
+            "categories": [
+                {"id": "Person", "name": "人物", "icon": "👤", "count": person_cnt[0]["cnt"] if person_cnt else 0},
+                {"id": "Event", "name": "事件", "icon": "⚔️", "count": event_cnt[0]["cnt"] if event_cnt else 0},
+                {"id": "Dynasty", "name": "政权·势力", "icon": "🏛️", "count": dynasty_cnt[0]["cnt"] if dynasty_cnt else 0},
+                {"id": "Place", "name": "地点", "icon": "📍", "count": place_cnt[0]["cnt"] if place_cnt else 0},
+                {"id": "OfficialTitle", "name": "官职", "icon": "🎖️", "count": title_cnt[0]["cnt"] if title_cnt else 0},
+            ]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/browse/Person/groups")
+async def browse_person_groups():
+    """获取人物的子分组（按角色分类）"""
+    from graph.connection import neo4j_conn
+
+    try:
+        # 按 role 分组
+        results = neo4j_conn.run_query("""
+        MATCH (p:Person)
+        WITH COALESCE(p.role, '其他') AS role, count(p) AS cnt
+        RETURN role, cnt
+        ORDER BY cnt DESC
+        """)
+
+        groups = []
+        for r in results:
+            role = r["role"] or "其他"
+            icon = {"皇帝": "👑", "将领": "⚔️", "谋士": "📜", "后妃": "👸",
+                    "宦官": "🏮", "节度使": "🏯", "文臣": "📖"}.get(role, "👤")
+            groups.append({
+                "id": f"Person_role_{role}",
+                "name": role,
+                "icon": icon,
+                "count": r["cnt"],
+                "filter": {"label": "Person", "field": "role", "value": role},
+            })
+
+        return {"groups": groups}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/browse/Event/groups")
+async def browse_event_groups():
+    """获取事件的子分组（按事件类型分类）"""
+    from graph.connection import neo4j_conn
+
+    try:
+        results = neo4j_conn.run_query("""
+        MATCH (e:Event)
+        WITH COALESCE(e.event_type, '其他') AS etype, count(e) AS cnt
+        RETURN etype, cnt
+        ORDER BY cnt DESC
+        """)
+
+        groups = []
+        for r in results:
+            etype = r["etype"] or "其他"
+            icon = {"战役": "⚔️", "政变": "🗡️", "外交": "🤝", "继位": "👑",
+                    "叛乱": "🔥", "围城": "🏰", "会盟": "📜"}.get(etype, "📋")
+            groups.append({
+                "id": f"Event_type_{etype}",
+                "name": etype,
+                "icon": icon,
+                "count": r["cnt"],
+                "filter": {"label": "Event", "field": "event_type", "value": etype},
+            })
+
+        return {"groups": groups}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/browse/Dynasty/groups")
+async def browse_dynasty_groups():
+    """获取政权的子分组（按 faction_type 分类）"""
+    from graph.connection import neo4j_conn
+
+    try:
+        results = neo4j_conn.run_query("""
+        MATCH (d:Dynasty)
+        WITH COALESCE(d.faction_type, '其他') AS ftype, count(d) AS cnt
+        RETURN ftype, cnt
+        ORDER BY cnt DESC
+        """)
+
+        groups = []
+        for r in results:
+            ftype = r["ftype"] or "其他"
+            icon = {"中原王朝": "🏛️", "割据政权": "🏰", "藩镇": "🏯",
+                    "部族": "🐎", "军阀": "⚔️"}.get(ftype, "🏛️")
+            groups.append({
+                "id": f"Dynasty_type_{ftype}",
+                "name": ftype,
+                "icon": icon,
+                "count": r["cnt"],
+                "filter": {"label": "Dynasty", "field": "faction_type", "value": ftype},
+            })
+
+        return {"groups": groups}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/browse/Place/groups")
+async def browse_place_groups():
+    """地点没有明确子分组，直接返回空（前端直接列出全部地点）"""
+    return {"groups": []}
+
+
+@app.get("/api/browse/OfficialTitle/groups")
+async def browse_title_groups():
+    """获取官职的子分组（按 category 分类）"""
+    from graph.connection import neo4j_conn
+
+    try:
+        results = neo4j_conn.run_query("""
+        MATCH (t:OfficialTitle)
+        WITH COALESCE(t.category, '其他') AS cat, count(t) AS cnt
+        RETURN cat, cnt
+        ORDER BY cnt DESC
+        """)
+
+        groups = []
+        for r in results:
+            cat = r["cat"] or "其他"
+            icon = {"军职": "⚔️", "文职": "📜", "中枢": "👑", "地方": "🏘️",
+                    "监察": "👁️", "藩镇": "🏯"}.get(cat, "🎖️")
+            groups.append({
+                "id": f"OfficialTitle_cat_{cat}",
+                "name": cat,
+                "icon": icon,
+                "count": r["cnt"],
+                "filter": {"label": "OfficialTitle", "field": "category", "value": cat},
+            })
+
+        return {"groups": groups}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/browse/OfficialTitle/holders")
+async def browse_title_holders(uid: str):
+    """获取某官职的所有担任者（通过 HELD_POSITION / APPOINTED_TO 关系）
+
+    返回与该官职相关的人物列表，供 fanzhen.html 联动展示。
+    """
+    from graph.connection import neo4j_conn
+
+    try:
+        results = neo4j_conn.run_query("""
+        MATCH (p:Person)-[r:HELD_POSITION|APPOINTED_TO]->(t:OfficialTitle {uid: $uid})
+        RETURN p.uid AS uid, p.original_name AS name,
+               p.aliases AS aliases, p.role AS role,
+               p.loyalty AS loyalty,
+               type(r) AS rel_type, r.description AS rel_desc, r.year AS year
+        ORDER BY r.year
+        """, {"uid": uid})
+
+        holders = []
+        for r in results:
+            holders.append({
+                "uid": r["uid"],
+                "name": r["name"],
+                "aliases": r.get("aliases") or [],
+                "role": r.get("role") or "",
+                "loyalty": r.get("loyalty") or [],
+                "relation": r.get("rel_type") or "HELD_POSITION",
+                "rel_desc": r.get("rel_desc") or "",
+                "year": r.get("year"),
+            })
+
+        return {"title_uid": uid, "holders": holders}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/admin/seed_titles")
+async def admin_seed_titles():
+    """管理接口：写入/刷新种子官职数据（幂等操作）"""
+    from graph.crud import graph_crud
+
+    try:
+        graph_crud.seed_official_titles()
+        return {"status": "ok", "message": "种子官职写入成功"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/browse/entities")
+async def browse_entities(label: str, field: str = "", value: str = ""):
+    """获取某个分类下的实体列表"""
+    from graph.connection import neo4j_conn
+
+    try:
+        if label == "Person":
+            if field == "role" and value:
+                if value == "其他":
+                    cypher = """
+                    MATCH (p:Person)
+                    WHERE p.role IS NULL OR p.role = '其他' OR p.role = ''
+                    RETURN p.uid AS uid, p.original_name AS name, p.role AS sub, p.birth_year AS year
+                    ORDER BY p.original_name
+                    """
+                    results = neo4j_conn.run_query(cypher)
+                else:
+                    cypher = """
+                    MATCH (p:Person {role: $value})
+                    RETURN p.uid AS uid, p.original_name AS name, p.role AS sub, p.birth_year AS year
+                    ORDER BY p.original_name
+                    """
+                    results = neo4j_conn.run_query(cypher, {"value": value})
+            else:
+                cypher = """
+                MATCH (p:Person)
+                RETURN p.uid AS uid, p.original_name AS name, p.role AS sub, p.birth_year AS year
+                ORDER BY p.original_name
+                """
+                results = neo4j_conn.run_query(cypher)
+
+        elif label == "Event":
+            if field == "event_type" and value:
+                if value == "其他":
+                    cypher = """
+                    MATCH (e:Event)
+                    WHERE e.event_type IS NULL OR e.event_type = '其他' OR e.event_type = ''
+                    RETURN e.uid AS uid, e.name AS name, e.event_type AS sub, e.year AS year
+                    ORDER BY e.year, e.name
+                    """
+                    results = neo4j_conn.run_query(cypher)
+                else:
+                    cypher = """
+                    MATCH (e:Event {event_type: $value})
+                    RETURN e.uid AS uid, e.name AS name, e.event_type AS sub, e.year AS year
+                    ORDER BY e.year, e.name
+                    """
+                    results = neo4j_conn.run_query(cypher, {"value": value})
+            else:
+                cypher = """
+                MATCH (e:Event)
+                RETURN e.uid AS uid, e.name AS name, e.event_type AS sub, e.year AS year
+                ORDER BY e.year, e.name
+                """
+                results = neo4j_conn.run_query(cypher)
+
+        elif label == "Dynasty":
+            if field == "faction_type" and value:
+                if value == "其他":
+                    cypher = """
+                    MATCH (d:Dynasty)
+                    WHERE d.faction_type IS NULL OR d.faction_type = '其他' OR d.faction_type = ''
+                    RETURN d.uid AS uid, d.name AS name, d.faction_type AS sub, d.start_year AS year
+                    ORDER BY d.name
+                    """
+                    results = neo4j_conn.run_query(cypher)
+                else:
+                    cypher = """
+                    MATCH (d:Dynasty {faction_type: $value})
+                    RETURN d.uid AS uid, d.name AS name, d.faction_type AS sub, d.start_year AS year
+                    ORDER BY d.name
+                    """
+                    results = neo4j_conn.run_query(cypher, {"value": value})
+            else:
+                cypher = """
+                MATCH (d:Dynasty)
+                RETURN d.uid AS uid, d.name AS name, d.faction_type AS sub, d.start_year AS year
+                ORDER BY d.name
+                """
+                results = neo4j_conn.run_query(cypher)
+
+        elif label == "Place":
+            cypher = """
+            MATCH (pl:Place)
+            RETURN pl.uid AS uid, pl.name AS name, '' AS sub, null AS year
+            ORDER BY pl.name
+            """
+            results = neo4j_conn.run_query(cypher)
+
+        elif label == "OfficialTitle":
+            if field == "category" and value:
+                if value == "其他":
+                    cypher = """
+                    MATCH (t:OfficialTitle)
+                    WHERE t.category IS NULL OR t.category = '其他' OR t.category = ''
+                    RETURN t.uid AS uid, t.name AS name, t.category AS sub, null AS year
+                    ORDER BY t.name
+                    """
+                    results = neo4j_conn.run_query(cypher)
+                else:
+                    cypher = """
+                    MATCH (t:OfficialTitle {category: $value})
+                    RETURN t.uid AS uid, t.name AS name, t.category AS sub, null AS year
+                    ORDER BY t.name
+                    """
+                    results = neo4j_conn.run_query(cypher, {"value": value})
+            else:
+                cypher = """
+                MATCH (t:OfficialTitle)
+                RETURN t.uid AS uid, t.name AS name, t.category AS sub, null AS year
+                ORDER BY t.name
+                """
+                results = neo4j_conn.run_query(cypher)
+
+        else:
+            raise HTTPException(status_code=400, detail=f"未知实体类型: {label}")
+
+        return {"entities": results, "label": label}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/browse/entity_detail")
+async def browse_entity_detail(label: str, uid: str):
+    """获取通用实体详情（用于 Dynasty/Place 等）"""
+    from graph.connection import neo4j_conn
+
+    try:
+        if label == "Dynasty":
+            results = neo4j_conn.run_query("""
+            MATCH (d:Dynasty {uid: $uid})
+            RETURN d.uid AS uid, d.name AS name, d.aliases AS aliases,
+                   d.faction_type AS faction_type, d.founder AS founder,
+                   d.capital AS capital, d.start_year AS start_year,
+                   d.end_year AS end_year, d.predecessor AS predecessor,
+                   d.description AS description
+            """, {"uid": uid})
+        elif label == "Place":
+            results = neo4j_conn.run_query("""
+            MATCH (pl:Place {uid: $uid})
+            RETURN pl.uid AS uid, pl.name AS name,
+                   pl.description AS description
+            """, {"uid": uid})
+        elif label == "OfficialTitle":
+            results = neo4j_conn.run_query("""
+            MATCH (t:OfficialTitle {uid: $uid})
+            RETURN t.uid AS uid, t.name AS name, t.aliases AS aliases,
+                   t.category AS category, t.rank AS rank,
+                   t.description AS description, t.source AS source,
+                   t.duties AS duties, t.parent_title_uid AS parent_title_uid
+            """, {"uid": uid})
+        else:
+            results = neo4j_conn.run_query("""
+            MATCH (n {uid: $uid})
+            RETURN properties(n) AS props, labels(n) AS labels
+            """, {"uid": uid})
+            if results:
+                props = results[0].get("props", {})
+                return {"entity": props}
+            raise HTTPException(status_code=404, detail="实体不存在")
+
+        if not results:
+            raise HTTPException(status_code=404, detail="实体不存在")
+
+        return {"entity": results[0]}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ─────────────────── 知识攫取仪表盘 ───────────────────
+
+
+@app.get("/api/ingestion/dashboard")
+async def ingestion_dashboard():
+    """知识攫取仪表盘 - 返回进度 & 统计信息"""
+    from graph.connection import neo4j_conn
+
+    try:
+        # ── 1. 读取进度文件 ──
+        progress_file = settings.PROCESSED_DATA_DIR / "enhancement_progress.json"
+        chunks_file = settings.PROCESSED_DATA_DIR / "chunks.json"
+
+        processed_chunks = []
+        total_chunks = 0
+        chapter_stats = {}  # 章节 -> { total, processed }
+
+        # 加载全部 chunk 信息
+        all_chunks = []
+        if chunks_file.exists():
+            try:
+                raw = json.loads(chunks_file.read_text(encoding="utf-8"))
+                all_chunks = raw if isinstance(raw, list) else []
+                total_chunks = len(all_chunks)
+            except Exception:
+                total_chunks = 0
+
+        # 加载已处理的 chunk id
+        processed_set = set()
+        if progress_file.exists():
+            try:
+                pdata = json.loads(progress_file.read_text(encoding="utf-8"))
+                processed_set = set(pdata.get("processed_chunks", []))
+                processed_chunks = sorted(processed_set)
+            except Exception:
+                pass
+
+        processed_count = len(processed_set)
+
+        # 读取心跳文件（pipeline 每处理一个 chunk 就会更新）
+        heartbeat_file = settings.PROCESSED_DATA_DIR / "pipeline_heartbeat.json"
+        heartbeat = None
+        if heartbeat_file.exists():
+            try:
+                heartbeat = json.loads(heartbeat_file.read_text(encoding="utf-8"))
+            except Exception:
+                pass
+
+        # 按章节统计进度
+        for c in all_chunks:
+            ch = c.get("chapter", "未知章节")
+            if ch not in chapter_stats:
+                chapter_stats[ch] = {"total": 0, "processed": 0}
+            chapter_stats[ch]["total"] += 1
+            if c.get("chunk_id", "") in processed_set:
+                chapter_stats[ch]["processed"] += 1
+
+        # 排序章节（按chunk_id中的数字）
+        chapter_list = []
+        for ch_name, st in chapter_stats.items():
+            pct = round(st["processed"] / st["total"] * 100, 1) if st["total"] > 0 else 0
+            chapter_list.append({
+                "name": ch_name,
+                "total": st["total"],
+                "processed": st["processed"],
+                "percent": pct,
+            })
+        chapter_list.sort(key=lambda x: x["name"])
+
+        # ── 2. 图谱实体统计 ──
+        entity_stats = {}
+        for label in ["Person", "Dynasty", "Event", "Place", "OfficialTitle"]:
+            result = neo4j_conn.run_query(f"MATCH (n:{label}) RETURN count(n) AS cnt")
+            entity_stats[label] = result[0]["cnt"] if result else 0
+
+        rel_result = neo4j_conn.run_query("MATCH ()-[r]->() RETURN count(r) AS cnt")
+        entity_stats["Relation"] = rel_result[0]["cnt"] if rel_result else 0
+
+        # ── 3. 关系类型 Top 15 ──
+        rel_type_result = neo4j_conn.run_query("""
+        MATCH ()-[r]->()
+        RETURN type(r) AS rel_type, count(r) AS cnt
+        ORDER BY cnt DESC
+        LIMIT 15
+        """)
+        top_relations = [
+            {"type": r["rel_type"], "type_cn": RELATION_TYPE_CN.get(r["rel_type"], r["rel_type"]), "count": r["cnt"]}
+            for r in rel_type_result
+        ]
+
+        # ── 4. 最近处理的 chunk（取最后20个） ──
+        recent_chunks = []
+        if processed_chunks:
+            last_20 = processed_chunks[-20:]
+            # 反转，最新的在前
+            last_20.reverse()
+            # 查找对应的章节信息
+            chunk_map = {c.get("chunk_id"): c for c in all_chunks}
+            for cid in last_20:
+                info = chunk_map.get(cid, {})
+                recent_chunks.append({
+                    "chunk_id": cid,
+                    "chapter": info.get("chapter", "未知"),
+                    "char_count": info.get("char_count", 0),
+                })
+
+        # ── 5. 各事件类型分布 ──
+        event_type_result = neo4j_conn.run_query("""
+        MATCH (e:Event)
+        WITH COALESCE(e.event_type, '其他') AS etype, count(e) AS cnt
+        RETURN etype, cnt
+        ORDER BY cnt DESC
+        """)
+        event_types = [{"type": r["etype"], "count": r["cnt"]} for r in event_type_result]
+
+        # ── 6. 人物角色分布 ──
+        role_result = neo4j_conn.run_query("""
+        MATCH (p:Person)
+        WITH COALESCE(p.role, '其他') AS role, count(p) AS cnt
+        RETURN role, cnt
+        ORDER BY cnt DESC
+        """)
+        person_roles = [{"role": r["role"], "count": r["cnt"]} for r in role_result]
+
+        # ── 7. 官职分类分布 ──
+        title_cat_result = neo4j_conn.run_query("""
+        MATCH (t:OfficialTitle)
+        WITH COALESCE(t.category, '其他') AS cat, count(t) AS cnt
+        RETURN cat, cnt
+        ORDER BY cnt DESC
+        """)
+        title_categories = [{"category": r["cat"], "count": r["cnt"]} for r in title_cat_result]
+
+        return {
+            "progress": {
+                "total_chunks": total_chunks,
+                "processed_chunks": processed_count,
+                "percent": round(processed_count / total_chunks * 100, 1) if total_chunks > 0 else 0,
+                "remaining": total_chunks - processed_count,
+                "heartbeat": heartbeat,
+            },
+            "entity_stats": entity_stats,
+            "chapter_progress": chapter_list,
+            "top_relations": top_relations,
+            "recent_chunks": recent_chunks,
+            "event_types": event_types,
+            "person_roles": person_roles,
+            "title_categories": title_categories,
+        }
+    except Exception as e:
+        logger.error(f"仪表盘数据获取失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ─────────────────── LLM 总结 + 缓存 ───────────────────
